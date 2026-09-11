@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Printsello Job Article Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1d3557;
+    --navy-dark:#132840;
+    --red:#e63946;
+    --red-dark:#c62836;
+    --gold:#c9a227;
+    --green:#2a9d8f;
+    --bg:#f0f2f5;
+    --card:#ffffff;
+    --line:#e1e5eb;
+    --ink:#1d3557;
+    --ink-soft:#5b6b82;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+  }
+  h1,h2,h3,.disp{font-family:'Poppins',sans-serif;}
+
+  .ticker-wrap{
+    background:var(--navy-dark);
+    color:#fff;
+    overflow:hidden;
+    white-space:nowrap;
+    border-bottom:3px solid var(--gold);
+  }
+  .ticker{
+    display:inline-block;
+    padding:8px 0;
+    animation:scroll-left 18s linear infinite;
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:.3px;
+  }
+  .ticker b{color:var(--gold); margin-right:8px;}
+  @keyframes scroll-left{
+    0%{transform:translateX(100vw);}
+    100%{transform:translateX(-100%);}
+  }
+
+  .topbar{
+    background:linear-gradient(180deg,var(--navy) 0%, var(--navy-dark) 100%);
+    color:#fff;
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .seal{
+    width:52px;height:52px;border-radius:50%;
+    border:2.5px solid var(--gold);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Poppins',sans-serif;font-weight:800;font-size:11px;
+    color:var(--gold);
+    text-align:center;line-height:1.1;
+    flex-shrink:0;
+    background:rgba(201,162,39,0.08);
+  }
+  .brand h1{margin:0;font-size:20px;font-weight:700;color:#fff;}
+  .brand p{margin:2px 0 0;font-size:12.5px;color:#c3d0e0;font-weight:400;}
+  .badge-live{
+    background:var(--red);
+    color:#fff;
+    font-size:11px;
+    font-weight:600;
+    padding:5px 12px;
+    border-radius:20px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .layout{
+    display:grid;
+    grid-template-columns:380px 1fr;
+    gap:22px;
+    padding:26px;
+    max-width:1400px;
+    margin:0 auto;
+    align-items:start;
+  }
+  @media(max-width:980px){ .layout{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--card);
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    box-shadow:0 2px 10px rgba(29,53,87,0.06);
+  }
+  .panel-head{
+    padding:18px 22px;
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  .panel-head .idx{
+    width:26px;height:26px;border-radius:7px;
+    background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;flex-shrink:0;
+  }
+  .panel-head h2{margin:0;font-size:15.5px;font-weight:600;color:var(--navy);}
+  .panel-body{padding:20px 22px;}
+
+  label{
+    display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+    margin:0 0 6px;text-transform:uppercase;letter-spacing:.4px;
+  }
+  .field{margin-bottom:16px;}
+  input[type=text], textarea, select{
+    width:100%;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:11px 13px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    background:#fbfcfd;
+    transition:border-color .15s;
+  }
+  input[type=text]:focus, textarea:focus, select:focus{
+    outline:none;border-color:var(--navy);background:#fff;
+  }
+  textarea{resize:vertical;min-height:90px;line-height:1.5;}
+  .hint{font-size:11.5px;color:#8b98a8;margin-top:5px;line-height:1.4;}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .gen-btn{
+    width:100%;
+    background:linear-gradient(135deg,var(--red) 0%,var(--red-dark) 100%);
+    color:#fff;border:none;border-radius:12px;
+    padding:15px;font-size:15px;font-weight:700;font-family:'Poppins',sans-serif;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    box-shadow:0 6px 16px rgba(230,57,70,0.3);
+    transition:transform .12s, box-shadow .12s;
+  }
+  .gen-btn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(230,57,70,0.38);}
+  .gen-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  .gen-btn svg{width:17px;height:17px;}
+
+  .status-box{
+    margin-top:14px;
+    background:#fff8f8;
+    border:1px dashed var(--red);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:13px;
+    color:var(--red-dark);
+    display:none;
+  }
+  .status-box.show{display:block;}
+  .status-box .step{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .status-box .step:last-child{margin-bottom:0;}
+  .step .spinner{
+    width:12px;height:12px;border-radius:50%;
+    border:2px solid var(--red);border-top-color:transparent;
+    animation:spin .7s linear infinite;flex-shrink:0;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .step.done .spinner{border:none;background:var(--green);width:14px;height:14px;position:relative;}
+  .step.done .spinner::after{content:'✓';position:absolute;inset:0;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;}
+
+  .tabs{display:flex;gap:4px;padding:0 22px;border-bottom:1px solid var(--line);}
+  .tab{
+    padding:14px 4px;margin-right:22px;
+    font-size:13.5px;font-weight:600;color:#9aa5b3;
+    border-bottom:3px solid transparent;
+    cursor:pointer;
+  }
+  .tab.active{color:var(--navy);border-bottom-color:var(--red);}
+
+  .tabcontent{display:none;padding:22px;}
+  .tabcontent.active{display:block;}
+
+  .empty-state{
+    text-align:center;padding:70px 30px;color:#a7b1bf;
+  }
+  .empty-state .seal-big{
+    width:74px;height:74px;border-radius:50%;
+    border:3px dashed #c7d0dc;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 18px;font-size:26px;color:#c7d0dc;
+  }
+  .empty-state h3{margin:0 0 8px;color:var(--navy);font-size:16px;}
+  .empty-state p{margin:0;font-size:13.5px;max-width:340px;margin:0 auto;line-height:1.6;}
+
+  .preview-frame-wrap{
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:#e9edf2;
+  }
+  .browser-bar{
+    background:#dfe4ea;padding:9px 14px;display:flex;align-items:center;gap:6px;
+  }
+  .browser-bar span{width:9px;height:9px;border-radius:50%;background:#b9c1cc;}
+  iframe#previewFrame{
+    width:100%;height:680px;border:none;background:#fff;
+  }
+
+  .code-toolbar{
+    display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap;
+  }
+  .copy-btn{
+    background:var(--navy);color:#fff;border:none;border-radius:8px;
+    padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+    font-family:'Inter',sans-serif;
+    transition:background .15s;
+  }
+  .copy-btn:hover{background:var(--navy-dark);}
+  .copy-btn.alt{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
+  .copy-btn.alt:hover{border-color:var(--navy);}
+  .copy-btn.done{background:var(--green);}
+
+  textarea#htmlCode{
+    width:100%;height:520px;
+    background:#0d1b2a;color:#a3e6c5;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;line-height:1.55;
+    border-radius:12px;border:none;padding:18px;
+    resize:vertical;
+  }
+
+  .social-card{
+    background:#fbfcfd;border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-bottom:14px;
+  }
+  .social-card h4{
+    margin:0 0 8px;font-size:13px;font-weight:700;color:var(--navy);
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+  }
+  .social-card pre{
+    white-space:pre-wrap;word-break:break-word;
+    font-family:'Inter',sans-serif;font-size:13px;color:#3a4657;
+    margin:0;line-height:1.6;
+  }
+  .mini-copy{
+    background:none;border:1px solid var(--line);border-radius:6px;
+    padding:3px 9px;font-size:11px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;flex-shrink:0;
+  }
+  .mini-copy:hover{border-color:var(--navy);color:var(--navy);}
+
+  .disclaimer{
+    background:#fff4e5;border:1px solid #f0cf9a;color:#8a5a00;
+    font-size:12px;border-radius:10px;padding:11px 14px;margin-top:14px;line-height:1.55;
+  }
+
+  .footer-note{
+    text-align:center;color:#9aa5b3;font-size:12px;padding:20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap">
+  <div class="ticker" id="tickerText">
+    <b>LIVE</b> Job Title डालें → SEO Article तैयार करें → Blogger में Paste करें &nbsp;•&nbsp;
+    <b>NOTE</b> सटीकता के लिए असली Notification की details paste करें &nbsp;•&nbsp;
+    <b>TIP</b> Generate होने के बाद HTML Code Copy करके सीधे Blogger HTML View में paste करें
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="seal">GOVT<br>JOBS</div>
+    <div>
+      <h1>Printsello Job Article Generator</h1>
+      <p>Title डालो, पूरा SEO + AdSense-Safe Blogger Article पाओ</p>
+    </div>
+  </div>
+  <div class="badge-live"><span class="dot"></span> AI ENGINE ONLINE</div>
+</div>
+
+<div class="layout">
+
+  <div class="panel">
+    <div class="panel-head"><div class="idx">1</div><h2>Job Details भरें</h2></div>
+    <div class="panel-body">
+
+      <div class="field">
+        <label>Job Title *</label>
+        <input type="text" id="jobTitle" placeholder="जैसे: UP Police Constable Bharti 2026">
+      </div>
+
+      <div class="field">
+        <label>Content Language</label>
+        <select id="lang">
+          <option value="Hindi" selected>Hindi (हिंदी)</option>
+          <option value="Hinglish">Hinglish</option>
+          <option value="English">English</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>असली Notification Details (Optional पर Recommended)</label>
+        <textarea id="rawDetails" placeholder="Department, Total Vacancy, Last Date, Age Limit, Salary, Qualification, Fees, Selection Process — जो भी पता हो paste करें"></textarea>
+        <p class="hint">जितनी ज्यादा real details देंगे, article उतना ही accurate बनेगा। जो field नहीं देंगे उसे article में "Not Mentioned – Official Notification देखें" लिखा जाएगा — कोई गलत जानकारी invent नहीं होगी।</p>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Official Website</label>
+          <input type="text" id="officialSite" placeholder="Optional">
+        </div>
+        <div class="field">
+          <label>Apply / PDF Link</label>
+          <input type="text" id="applyLink" placeholder="Optional">
+        </div>
+      </div>
+
+      <button class="gen-btn" id="generateBtn" onclick="generateArticle()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+        Full Article Generate करें
+      </button>
+
+      <div class="status-box" id="statusBox"></div>
+
+      <div class="disclaimer">
+        ⚠ यह AI-generated draft है। Publish करने से पहले Vacancy, Last Date, Fees जैसी critical details को official notification से एक बार जरूर verify कर लें।
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" data-tab="preview" onclick="switchTab('preview')">Live Preview</div>
+      <div class="tab" data-tab="code" onclick="switchTab('code')">HTML Code</div>
+      <div class="tab" data-tab="social" onclick="switchTab('social')">Social Posts</div>
+    </div>
+
+    <div class="tabcontent active" id="tab-preview">
+      <div id="previewEmpty" class="empty-state">
+        <div class="seal-big">📰</div>
+        <h3>अभी कोई Article Generate नहीं हुआ</h3>
+        <p>बाईं तरफ Job Title डालकर "Full Article Generate करें" पर क्लिक करें — यहाँ live preview दिखेगा।</p>
+      </div>
+      <div id="previewFilled" style="display:none;">
+        <div class="preview-frame-wrap">
+          <div class="browser-bar"><span></span><span></span><span></span></div>
+          <iframe id="previewFrame"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabcontent" id="tab-code">
+      <div id="codeEmpty" class="empty-state">
+        <div class="seal-big">{ }</div>
+        <h3>HTML Code यहाँ दिखेगा</h3>
+        <p>Generate होने के बाद पूरा Blogger-ready HTML code (CSS + Schema + JS सहित) यहाँ मिलेगा।</p>
+      </div>
+      <div id="codeFilled" style="display:none;">
+        <div class="code-toolbar">
+          <button class="copy-btn" onclick="copyHtml()" id="copyHtmlBtn">Copy Full HTML Code</button>
+          <button class="copy-btn alt" onclick="downloadHtml()">Download .html</button>
+        </div>
+        <textarea id="htmlCode" spellcheck="false" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="tabcontent" id="tab-social">
+      <div id="socialEmpty" class="empty-state">
+        <div class="seal-big">📣</div>
+        <h3>Social Media Posts यहाँ दिखेंगे</h3>
+        <p>YouTube, Telegram, WhatsApp, Instagram, Facebook aur Push Notification — सब एक साथ, generate होने के बाद।</p>
+      </div>
+      <div id="socialFilled" style="display:none;"></div>
+    </div>
+  </div>
+
+</div>
+
+<p class="footer-note">Printsello AI CMS · SEO Automation Engine · Blogger UI Designer</p>
+
+<script>
+// 🔧 Vercel par deploy karne ke baad, apna backend URL yahan paste karein.
+// Example: "https://printsello-generator.vercel.app/api/generate"
+const BACKEND_URL = "https://YOUR-PROJECT-NAME.vercel.app/api/generate";
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.tabcontent').forEach(c=>c.classList.toggle('active', c.id==='tab-'+name));
+}
+
+const statusSteps = [
+  'Job Title Analyze हो रहा है...',
+  'SEO Content लिखा जा रहा है (Meta, Keywords, FAQ)...',
+  'Blogger HTML/CSS/JS UI बनाया जा रहा है...',
+  'Schema Markup + Social Posts तैयार हो रहे हैं...',
+  'Final Article Assemble हो रहा है...'
+];
+
+function setStatus(stepIndex, box){
+  box.classList.add('show');
+  box.innerHTML = statusSteps.map((s,i)=>{
+    const cls = i < stepIndex ? 'step done' : (i===stepIndex ? 'step' : 'step');
+    const icon = i < stepIndex ? '<div class="spinner"></div>' : (i===stepIndex ? '<div class="spinner"></div>' : '<div class="spinner" style="opacity:.25;border-top-color:#e63946;"></div>');
+    return '<div class="'+(i<=stepIndex?'step':'step')+' '+(i<stepIndex?'done':'')+'">'+icon+'<span>'+s+'</span></div>';
+  }).join('');
+}
+
+function buildPrompt(title, lang, raw, site, applyLink){
+  return `Tum ek professional Indian Sarkari Naukri blogger, SEO expert aur Blogger HTML/CSS designer ho.
+
+TASK: Job Title ke base par ek complete Blogger-ready Govt Job article banao.
+
+JOB TITLE: ${title}
+CONTENT LANGUAGE: ${lang}
+OFFICIAL WEBSITE (agar diya gaya): ${site || 'Not Provided'}
+APPLY / PDF LINK (agar diya gaya): ${applyLink || 'Not Provided'}
+USER-PROVIDED REAL NOTIFICATION DETAILS (sabse zyada accurate source, isi ko priority do):
+"""
+${raw || 'Koi additional detail nahi di gayi.'}
+"""
+
+CRITICAL RULE: Agar koi field (vacancy, last date, age limit, salary, fees, qualification, selection process) na to job title se na hi user details se pata chale, to us field me exactly likho: "Not Mentioned – Official Notification Verify Karein". Kabhi bhi fake numbers, fake dates ya fake salary invent mat karo.
+
+Tumhe teeko exactly is format me, in delimiters ke saath, output dena hai — delimiters ke bahar KUCH bhi mat likhna (no preamble, no explanation, no markdown fences):
+
+###SEO_META_START###
+(Yahan sirf ye likho: SEO Title, Meta Title, Meta Description, Focus Keyword, LSI Keywords comma separated, URL Slug — har ek naye line par label ke saath)
+###SEO_META_END###
+
+###ARTICLE_HTML_START###
+(Yahan ek COMPLETE single self-contained HTML block do jo seedha Blogger "HTML View" me paste karne layak ho. Isme ye sab ek hi file me included ho:
+- <style> tag me pura CSS: primary color #e63946, secondary #1d3557, background #f8f9fa, card #ffffff, border-radius 18px, soft shadows, hover effects, gradient buttons, glass effect, dark mode toggle support via class, Poppins font headings, Inter font body (Google Fonts link included)
+- Reading progress bar (JS + CSS)
+- Breaking news badge, gradient hero header, featured image placeholder (use a descriptive alt text, use a placeholder image url like https://via.placeholder.com/1200x600), job title, publish date (today), author box, reading time estimate
+- Quick Overview card, Job Summary card, Alert box, Table of Contents (with anchor links), Vacancy table, Eligibility card, Salary card, Age limit card, Important Dates timeline, Selection Process card, Apply Steps card, Important Links card (with placeholder hrefs if not given), FAQ accordion (min 6 Q&A) with working JS toggle, Related Jobs section (3 dummy relevant titles), Social Share buttons, Tags, Previous/Next post links (dummy)
+- Floating sticky Apply button, Telegram join floating button, WhatsApp share floating button
+- Bottom CTA box, comment box placeholder, related article slider (simple CSS/JS)
+- Dark mode toggle button (working, toggles a class on a wrapper and swaps CSS variables), Print button (window.print), Copy Full Article button, Copy HTML button, Copy FAQ button, Copy Schema button, Scroll to top button, lazy loading on images (loading="lazy"), smooth scroll CSS
+- JSON-LD Schema markup: JobPosting schema, FAQPage schema, BreadcrumbList schema — populated with real extracted data, using "Not Mentioned" placeholders where unknown, never fake specific numbers
+- Full <script> at the end with all JS needed for above features (progress bar, accordion, dark mode, copy buttons, scroll to top) — vanilla JS only, no external library dependency
+- Main body content must be 1200+ words of natural, human-sounding, AdSense-safe Sarkari Naukri article content, structured with H1/H2/H3, written in ${lang}, covering: introduction, overview, eligibility, vacancy details, important dates, selection process, how to apply steps, FAQs, conclusion with CTA
+This must be ONE complete valid HTML fragment — style tag, body html, script tag, all together, no missing closing tags.)
+###ARTICLE_HTML_END###
+
+###SOCIAL_START###
+YOUTUBE_TITLE: ...
+YOUTUBE_DESCRIPTION: ...
+TELEGRAM_POST: ...
+WHATSAPP_TEXT: ...
+INSTAGRAM_CAPTION: ...
+FACEBOOK_POST: ...
+PUSH_NOTIFICATION: ...
+###SOCIAL_END###
+
+Content AI-generated jaisa nahi lagna chahiye, natural human blogger tone use karo. Poori tarah AdSense-safe rakho — koi banned/sensitive claim mat karo.`;
+}
+
+function extractBetween(text, startTag, endTag){
+  const s = text.indexOf(startTag);
+  const e = text.indexOf(endTag);
+  if(s===-1 || e===-1) return '';
+  return text.substring(s+startTag.length, e).trim();
+}
+
+async function generateArticle(){
+  const title = document.getElementById('jobTitle').value.trim();
+  const lang = document.getElementById('lang').value;
+  const raw = document.getElementById('rawDetails').value.trim();
+  const site = document.getElementById('officialSite').value.trim();
+  const applyLink = document.getElementById('applyLink').value.trim();
+  const btn = document.getElementById('generateBtn');
+  const box = document.getElementById('statusBox');
+
+  if(!title){
+    alert('कृपया पहले Job Title डालें।');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  setStatus(0, box);
+
+  try{
+    setStatus(1, box);
+    const prompt = buildPrompt(title, lang, raw, site, applyLink);
+
+    if(BACKEND_URL.includes('YOUR-PROJECT-NAME')){
+      throw new Error('Backend URL set nahi hai. index.html me BACKEND_URL variable ko apne deployed Vercel URL se badlein.');
+    }
+
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+
+    setStatus(2, box);
+    const data = await response.json();
+
+    if(!response.ok){
+      throw new Error(data.error || ('Server error (status ' + response.status + ')'));
+    }
+
+    const fullText = (data.content || []).map(b => b.text || '').join('\n');
+
+    setStatus(3, box);
+    const seoMeta = extractBetween(fullText, '###SEO_META_START###', '###SEO_META_END###');
+    const articleHtml = extractBetween(fullText, '###ARTICLE_HTML_START###', '###ARTICLE_HTML_END###');
+    const socialRaw = extractBetween(fullText, '###SOCIAL_START###', '###SOCIAL_END###');
+
+    setStatus(4, box);
+
+    if(!articleHtml){
+      throw new Error('Article HTML nahi mil paya. Response incomplete tha, dobara try karein.');
+    }
+
+    document.getElementById('previewEmpty').style.display = 'none';
+    document.getElementById('previewFilled').style.display = 'block';
+    document.getElementById('previewFrame').srcdoc = articleHtml;
+
+    document.getElementById('codeEmpty').style.display = 'none';
+    document.getElementById('codeFilled').style.display = 'block';
+    document.getElementById('htmlCode').value = articleHtml;
+
+    renderSocial(socialRaw, seoMeta);
+
+    box.classList.remove('show');
+    switchTab('preview');
+  }catch(err){
+    box.innerHTML = '<div class="step" style="color:#c62836;">⚠ Error: '+err.message+' — कृपया दोबारा try करें।</div>';
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg> Full Article Generate करें';
+  }
+}
+
+function renderSocial(socialRaw, seoMeta){
+  const labels = {
+    YOUTUBE_TITLE: 'YouTube Title',
+    YOUTUBE_DESCRIPTION: 'YouTube Description',
+    TELEGRAM_POST: 'Telegram Post',
+    WHATSAPP_TEXT: 'WhatsApp Text',
+    INSTAGRAM_CAPTION: 'Instagram Caption',
+    FACEBOOK_POST: 'Facebook Post',
+    PUSH_NOTIFICATION: 'Push Notification'
+  };
+  const lines = socialRaw.split('\n');
+  const items = {};
+  let currentKey = null;
+  lines.forEach(line=>{
+    const match = line.match(/^([A-Z_]+):\s*(.*)$/);
+    if(match && labels[match[1]]){
+      currentKey = match[1];
+      items[currentKey] = match[2];
+    } else if(currentKey){
+      items[currentKey] += ' ' + line.trim();
+    }
+  });
+
+  let html = '';
+  if(seoMeta){
+    html += '<div class="social-card"><h4>SEO Meta Bundle <button class="mini-copy" onclick="copyText(this)">Copy</button></h4><pre>'+escapeHtml(seoMeta)+'</pre></div>';
+  }
+  Object.keys(labels).forEach(key=>{
+    if(items[key]){
+      html += '<div class="social-card"><h4>'+labels[key]+' <button class="mini-copy" onclick="copyText(this)">Copy</button></h4><pre>'+escapeHtml(items[key].trim())+'</pre></div>';
+    }
+  });
+
+  document.getElementById('socialEmpty').style.display = 'none';
+  document.getElementById('socialFilled').style.display = 'block';
+  document.getElementById('socialFilled').innerHTML = html || '<p style="font-size:13px;color:#9aa5b3;">Social posts generate nahi ho paaye, dobara try karein.</p>';
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function copyText(btn){
+  const pre = btn.closest('.social-card').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent).then(()=>{
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(()=>btn.textContent = original, 1500);
+  });
+}
+
+function copyHtml(){
+  const code = document.getElementById('htmlCode').value;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn = document.getElementById('copyHtmlBtn');
+    const original = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+    setTimeout(()=>{ btn.textContent = original; btn.classList.remove('done'); }, 2000);
+  });
+}
+
+function downloadHtml(){
+  const code = document.getElementById('htmlCode').value;
+  const blob = new Blob([code], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'job-article.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
