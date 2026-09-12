@@ -6,6 +6,7 @@
 <title>Printsello Job Article Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
     --navy:#1d3557;
@@ -265,6 +266,45 @@
   .footer-note{
     text-align:center;color:#9aa5b3;font-size:12px;padding:20px;
   }
+
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media(max-width:460px){ .row3{grid-template-columns:1fr;} }
+
+  .pdf-upload{
+    border:1.5px dashed var(--line);border-radius:12px;
+    padding:14px 16px;display:flex;align-items:center;gap:12px;
+    background:#fbfcfd;margin-bottom:16px;
+  }
+  .pdf-upload input[type=file]{display:none;}
+  .pdf-upload label.pdf-btn{
+    background:var(--navy);color:#fff;border:none;border-radius:9px;
+    padding:9px 14px;font-size:12.5px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;gap:7px;flex-shrink:0;
+    text-transform:none;letter-spacing:0;margin:0;
+    font-family:'Inter',sans-serif;
+  }
+  .pdf-upload label.pdf-btn:hover{background:var(--navy-dark);}
+  .pdf-upload .pdf-info{font-size:12px;color:var(--ink-soft);line-height:1.5;}
+  .pdf-upload .pdf-info b{color:var(--navy);}
+  .pdf-status{
+    font-size:12px;font-weight:600;margin-top:8px;display:none;
+    align-items:center;gap:7px;
+  }
+  .pdf-status.show{display:flex;}
+  .pdf-status .spinner{
+    width:12px;height:12px;border-radius:50%;
+    border:2px solid var(--navy);border-top-color:transparent;
+    animation:spin .7s linear infinite;flex-shrink:0;
+  }
+  .pdf-status.ok{color:var(--green);}
+  .pdf-status.err{color:var(--red-dark);}
+
+  .section-sub{
+    font-size:11.5px;font-weight:700;color:var(--navy);
+    text-transform:uppercase;letter-spacing:.5px;
+    margin:22px 0 12px;padding-top:14px;border-top:1px dashed var(--line);
+  }
+  .section-sub:first-child{margin-top:0;padding-top:0;border-top:none;}
 </style>
 </head>
 <body>
@@ -299,19 +339,82 @@
         <input type="text" id="jobTitle" placeholder="जैसे: UP Police Constable Bharti 2026">
       </div>
 
-      <div class="field">
-        <label>Content Language</label>
-        <select id="lang">
-          <option value="Hindi" selected>Hindi (हिंदी)</option>
-          <option value="Hinglish">Hinglish</option>
-          <option value="English">English</option>
-        </select>
+      <div class="row2">
+        <div class="field">
+          <label>Content Language</label>
+          <select id="lang">
+            <option value="Hindi" selected>Hindi (हिंदी)</option>
+            <option value="Hinglish">Hinglish</option>
+            <option value="English">English</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Author Name</label>
+          <input type="text" id="authorName" value="Satish Verma" placeholder="जैसे: Satish Verma">
+          <p class="hint" style="margin-top:5px;">Article के bottom में "Printsello – [naam]" author box में दिखेगा।</p>
+        </div>
+      </div>
+
+      <div class="section-sub">📄 Official Notification PDF</div>
+      <div class="pdf-upload">
+        <label class="pdf-btn" for="pdfUpload">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          PDF Upload करें
+        </label>
+        <input type="file" id="pdfUpload" accept="application/pdf" onchange="extractFromPDF(this.files[0])">
+        <div class="pdf-info"><b>Auto-Fill:</b> PDF upload karte hi neeche ke fields apne aap bhar jaayenge.</div>
+      </div>
+      <div class="pdf-status" id="pdfStatus"></div>
+
+      <div class="section-sub">🏛️ Notification Details</div>
+
+      <div class="row2">
+        <div class="field">
+          <label>भर्ती बोर्ड (Recruitment Board)</label>
+          <input type="text" id="board" placeholder="जैसे: UP Police Recruitment Board">
+        </div>
+        <div class="field">
+          <label>पद का नाम (Post Name)</label>
+          <input type="text" id="postName" placeholder="जैसे: Constable">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>कुल पद (Total Vacancy)</label>
+          <input type="text" id="vacancy" placeholder="जैसे: 60,244">
+        </div>
+        <div class="field">
+          <label>वेतन (Salary)</label>
+          <input type="text" id="salary" placeholder="जैसे: ₹21,700 – ₹69,100">
+        </div>
       </div>
 
       <div class="field">
-        <label>असली Notification Details (Optional पर Recommended)</label>
-        <textarea id="rawDetails" placeholder="Department, Total Vacancy, Last Date, Age Limit, Salary, Qualification, Fees, Selection Process — जो भी पता हो paste करें"></textarea>
-        <p class="hint">जितनी ज्यादा real details देंगे, article उतना ही accurate बनेगा। जो field नहीं देंगे उसे article में "Not Mentioned – Official Notification देखें" लिखा जाएगा — कोई गलत जानकारी invent नहीं होगी।</p>
+        <label>योग्यता (Eligibility)</label>
+        <input type="text" id="eligibility" placeholder="जैसे: 12वीं Pass + Age 18-25 Years">
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>आवेदन की अंतिम तिथि (Last Date)</label>
+          <input type="text" id="lastDate" placeholder="जैसे: 15/01/2026">
+        </div>
+        <div class="field">
+          <label>महत्वपूर्ण तिथियां (Important Dates)</label>
+          <input type="text" id="importantDates" placeholder="Start, Exam, Admit Card date etc.">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>आवेदन प्रक्रिया (Application Process)</label>
+        <textarea id="applicationProcess" placeholder="Online/Offline apply steps, fees, documents required..." style="min-height:70px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label>अतिरिक्त जानकारी (Additional Notes, Optional)</label>
+        <textarea id="additionalNotes" placeholder="Koi aur detail jo upar ke fields me cover nahi hui — Selection Process, Age Relaxation, etc."></textarea>
+        <p class="hint">जितनी ज्यादा real details देंगे, article उतना ही accurate बनेगा। जो field khaali chhodenge use article में "Not Mentioned – Official Notification देखें" लिखा जाएगा — कोई गलत जानकारी invent नहीं होगी।</p>
       </div>
 
       <div class="row2">
@@ -391,7 +494,13 @@
 <script>
 // 🔧 Vercel par deploy karne ke baad, apna backend URL yahan paste karein.
 // Example: "https://printsello-generator.vercel.app/api/generate"
-const BACKEND_URL = "https://printsello-generator.vercel.app/api/generate";
+const BACKEND_URL = "https://YOUR-PROJECT-NAME.vercel.app/api/generate";
+// PDF se details extract karne wala backend (same domain, /api/extract)
+const EXTRACT_BACKEND_URL = BACKEND_URL.replace(/\/api\/generate$/, '/api/extract');
+
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
 
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
@@ -415,21 +524,42 @@ function setStatus(stepIndex, box){
   }).join('');
 }
 
-function buildPrompt(title, lang, raw, site, applyLink){
+function buildPrompt(title, lang, fields, site, applyLink){
+  const structuredBlock = [
+    ['भर्ती बोर्ड (Recruitment Board)', fields.board],
+    ['पद का नाम (Post Name)', fields.postName],
+    ['कुल पद (Total Vacancy)', fields.vacancy],
+    ['योग्यता (Eligibility)', fields.eligibility],
+    ['वेतन (Salary)', fields.salary],
+    ['आवेदन की अंतिम तिथि (Last Date)', fields.lastDate],
+    ['महत्वपूर्ण तिथियां (Important Dates)', fields.importantDates],
+    ['आवेदन प्रक्रिया (Application Process)', fields.applicationProcess],
+  ].map(([label, val]) => `${label}: ${val || 'Not Provided'}`).join('\n');
+
   return `Tum ek professional Indian Sarkari Naukri blogger, SEO expert aur Blogger HTML/CSS designer ho.
 
 TASK: Job Title ke base par ek complete Blogger-ready Govt Job article banao.
 
 JOB TITLE: ${title}
 CONTENT LANGUAGE: ${lang}
+AUTHOR NAME: ${fields.authorName || 'Satish Verma'}
+BRAND NAME: Printsello
 OFFICIAL WEBSITE (agar diya gaya): ${site || 'Not Provided'}
 APPLY / PDF LINK (agar diya gaya): ${applyLink || 'Not Provided'}
-USER-PROVIDED REAL NOTIFICATION DETAILS (sabse zyada accurate source, isi ko priority do):
+
+USER-PROVIDED STRUCTURED NOTIFICATION DETAILS (sabse zyada accurate source, isi ko priority do):
 """
-${raw || 'Koi additional detail nahi di gayi.'}
+${structuredBlock}
+"""
+
+ADDITIONAL NOTES FROM USER:
+"""
+${fields.additionalNotes || 'Koi additional note nahi di gayi.'}
 """
 
 CRITICAL RULE: Agar koi field (vacancy, last date, age limit, salary, fees, qualification, selection process) na to job title se na hi user details se pata chale, to us field me exactly likho: "Not Mentioned – Official Notification Verify Karein". Kabhi bhi fake numbers, fake dates ya fake salary invent mat karo.
+
+AUTHOR BOX RULE: Article ke bilkul BOTTOM me (conclusion/FAQ ke baad, related posts se pehle) ek dedicated "Author Bio Box" card zaroor banao — usme round avatar (author ke naam ke initials), naam "${fields.authorName || 'Satish Verma'}", brand line "Printsello" (bold, accent color me), 1-2 line generic bio ("Sarkari Naukri updates par likhta/likhti hai, ${fields.authorName || 'Satish Verma'} Printsello team ka hissa hai"), aur chhote social icons (dummy links) ka row. Ye top wale hero-header author line ke ALAWA hai — top wala bhi rehne do, bottom wala naya add karo. Baaki poori design/CSS/structure/features EXACTLY wahi rakho jo pehle se specify ki gayi hai, bas isse aur polish/premium feel do.
 
 Tumhe teeko exactly is format me, in delimiters ke saath, output dena hai — delimiters ke bahar KUCH bhi mat likhna (no preamble, no explanation, no markdown fences):
 
@@ -475,11 +605,23 @@ function extractBetween(text, startTag, endTag){
 async function generateArticle(){
   const title = document.getElementById('jobTitle').value.trim();
   const lang = document.getElementById('lang').value;
-  const raw = document.getElementById('rawDetails').value.trim();
   const site = document.getElementById('officialSite').value.trim();
   const applyLink = document.getElementById('applyLink').value.trim();
   const btn = document.getElementById('generateBtn');
   const box = document.getElementById('statusBox');
+
+  const fields = {
+    authorName: document.getElementById('authorName').value.trim(),
+    board: document.getElementById('board').value.trim(),
+    postName: document.getElementById('postName').value.trim(),
+    vacancy: document.getElementById('vacancy').value.trim(),
+    eligibility: document.getElementById('eligibility').value.trim(),
+    salary: document.getElementById('salary').value.trim(),
+    lastDate: document.getElementById('lastDate').value.trim(),
+    importantDates: document.getElementById('importantDates').value.trim(),
+    applicationProcess: document.getElementById('applicationProcess').value.trim(),
+    additionalNotes: document.getElementById('additionalNotes').value.trim(),
+  };
 
   if(!title){
     alert('कृपया पहले Job Title डालें।');
@@ -492,7 +634,7 @@ async function generateArticle(){
 
   try{
     setStatus(1, box);
-    const prompt = buildPrompt(title, lang, raw, site, applyLink);
+    const prompt = buildPrompt(title, lang, fields, site, applyLink);
 
     if(BACKEND_URL.includes('YOUR-PROJECT-NAME')){
       throw new Error('Backend URL set nahi hai. index.html me BACKEND_URL variable ko apne deployed Vercel URL se badlein.');
@@ -617,6 +759,91 @@ function downloadHtml(){
   a.download = 'job-article.html';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function setPdfStatus(msg, cls){
+  const el = document.getElementById('pdfStatus');
+  el.className = 'pdf-status show' + (cls ? ' ' + cls : '');
+  el.innerHTML = (cls==='ok' ? '✓ ' : cls==='err' ? '⚠ ' : '<div class="spinner"></div>') + msg;
+}
+
+async function readPdfText(file){
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for(let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+    if(text.length > 30000) break; // enough content, avoid huge payloads
+  }
+  return text;
+}
+
+async function extractFromPDF(file){
+  if(!file) return;
+  if(file.type !== 'application/pdf'){
+    setPdfStatus('Sirf PDF file upload karein.', 'err');
+    return;
+  }
+
+  try{
+    setPdfStatus('PDF padhi jaa rahi hai...');
+    const pdfText = await readPdfText(file);
+
+    if(!pdfText.trim()){
+      setPdfStatus('PDF se text nahi mil paya (scanned image ho sakta hai). Details manually bhar dein.', 'err');
+      return;
+    }
+
+    if(EXTRACT_BACKEND_URL.includes('YOUR-PROJECT-NAME')){
+      setPdfStatus('Backend URL set nahi hai. index.html me BACKEND_URL set karein.', 'err');
+      return;
+    }
+
+    setPdfStatus('AI se details extract ho rahi hain...');
+
+    const response = await fetch(EXTRACT_BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: pdfText.slice(0, 30000) })
+    });
+
+    const data = await response.json();
+
+    if(!response.ok){
+      setPdfStatus(data.error || 'Extraction fail hua.', 'err');
+      return;
+    }
+
+    const f = data.fields || {};
+    const setIf = (id, val) => {
+      if(val){ document.getElementById(id).value = val; }
+    };
+
+    setIf('board', f.board);
+    setIf('postName', f.postName);
+    setIf('vacancy', f.vacancy);
+    setIf('eligibility', f.eligibility);
+    setIf('salary', f.salary);
+    setIf('lastDate', f.lastDate);
+    setIf('importantDates', f.importantDates);
+    setIf('applicationProcess', f.applicationProcess);
+
+    if(f.postName && !document.getElementById('jobTitle').value.trim()){
+      document.getElementById('jobTitle').value = f.postName;
+    }
+    if(f.officialWebsite && !document.getElementById('officialSite').value.trim()){
+      document.getElementById('officialSite').value = f.officialWebsite;
+    }
+    if(f.applyLink && !document.getElementById('applyLink').value.trim()){
+      document.getElementById('applyLink').value = f.applyLink;
+    }
+
+    setPdfStatus('Fields auto-fill ho gaye! Ek baar check kar lein.', 'ok');
+  }catch(err){
+    setPdfStatus('Error: ' + err.message, 'err');
+  }
 }
 </script>
 </body>
