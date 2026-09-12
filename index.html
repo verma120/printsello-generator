@@ -492,11 +492,10 @@
 <p class="footer-note">Printsello AI CMS · SEO Automation Engine · Blogger UI Designer</p>
 
 <script>
-// 🔧 Vercel par deploy karne ke baad, apna backend URL yahan paste karein.
-// Example: "https://printsello-generator.vercel.app/api/generate"
-const BACKEND_URL = "https://printsello-generator.vercel.app/api/generate";
-// PDF se details extract karne wala backend (same domain, /api/extract)
-const EXTRACT_BACKEND_URL = BACKEND_URL.replace(/\/api\/generate$/, '/api/extract');
+// Backend same domain par hai, isliye relative path use kar rahe hain —
+// isse "https://" typo ki koi gunjaish nahi rehti.
+const BACKEND_URL = "/api/generate";
+const EXTRACT_BACKEND_URL = "/api/extract";
 
 if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -635,10 +634,6 @@ async function generateArticle(){
   try{
     setStatus(1, box);
     const prompt = buildPrompt(title, lang, fields, site, applyLink);
-
-    if(BACKEND_URL.includes('YOUR-PROJECT-NAME')){
-      throw new Error('Backend URL set nahi hai. index.html me BACKEND_URL variable ko apne deployed Vercel URL se badlein.');
-    }
 
     const response = await fetch(BACKEND_URL, {
       method: "POST",
@@ -793,11 +788,6 @@ async function extractFromPDF(file){
 
     if(!pdfText.trim()){
       setPdfStatus('PDF se text nahi mil paya (scanned image ho sakta hai). Details manually bhar dein.', 'err');
-      return;
-    }
-
-    if(EXTRACT_BACKEND_URL.includes('YOUR-PROJECT-NAME')){
-      setPdfStatus('Backend URL set nahi hai. index.html me BACKEND_URL set karein.', 'err');
       return;
     }
 
