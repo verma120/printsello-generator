@@ -3,7 +3,6 @@
 // Get a free key at: https://aistudio.google.com/apikey
 
 export default async function handler(req, res) {
-  // --- CORS: Blogger / kisi bhi domain se call allow karne ke liye ---
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -29,8 +28,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Free tier model. If you hit rate limits, gemini-2.0-flash-lite has an even
-    // higher free RPM/RPD — swap the model name below.
     const MODEL = 'gemini-2.5-flash';
 
     const geminiResponse = await fetch(
@@ -41,8 +38,14 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            maxOutputTokens: 8000,
-            temperature: 0.7
+            // Article + full HTML/CSS/JS + schema is a LOT of text, so give it
+            // plenty of room. 2.5 Flash's ceiling is 65536.
+            maxOutputTokens: 32000,
+            temperature: 0.7,
+            // Gemini 2.5 models "think" before answering, and those thinking
+            // tokens are deducted from maxOutputTokens too. Turning thinking
+            // off means the full budget goes to the actual visible article.
+            thinkingConfig: { thinkingBudget: 0 }
           }
         })
       }
@@ -56,17 +59,22 @@ export default async function handler(req, res) {
       });
     }
 
-    const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '';
+    const candidate = data?.candidates?.[0];
+    const text = candidate?.content?.parts?.map(p => p.text || '').join('\n') || '';
 
     if (!text) {
-      const finishReason = data?.candidates?.[0]?.finishReason || 'unknown';
+      const finishReason = candidate?.finishReason || 'unknown';
       return res.status(502).json({
         error: `Gemini se khaali response aaya (finishReason: ${finishReason}). Dobara try karein ya prompt chhota karein.`
       });
     }
 
-    // Normalize to the same shape the frontend already expects from Anthropic:
-    // { content: [ { text: "..." } ] }
+    if (candidate?.finishReason === 'MAX_TOKENS') {
+      return res.status(502).json({
+        error: 'Response beech me hi kat gaya (token limit). Dobara try karein — usually agli baar poora ban jaata hai.'
+      });
+    }
+
     return res.status(200).json({ content: [{ text }] });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Unknown server error.' });
