@@ -642,7 +642,13 @@ async function generateArticle(){
     });
 
     setStatus(2, box);
-    const data = await response.json();
+    const rawBody = await response.text();
+    let data;
+    try{
+      data = JSON.parse(rawBody);
+    }catch(parseErr){
+      throw new Error('Server se JSON nahi mila (status '+response.status+'). Raw response: ' + rawBody.slice(0, 150));
+    }
 
     if(!response.ok){
       throw new Error(data.error || ('Server error (status ' + response.status + ')'));
@@ -799,10 +805,17 @@ async function extractFromPDF(file){
       body: JSON.stringify({ text: pdfText.slice(0, 30000) })
     });
 
-    const data = await response.json();
+    const rawBody = await response.text();
+    let data;
+    try{
+      data = JSON.parse(rawBody);
+    }catch(parseErr){
+      setPdfStatus('Server se JSON nahi mila (status '+response.status+'). Raw response: ' + rawBody.slice(0, 150), 'err');
+      return;
+    }
 
     if(!response.ok){
-      setPdfStatus(data.error || 'Extraction fail hua.', 'err');
+      setPdfStatus(data.error || ('Server error (status ' + response.status + ')'), 'err');
       return;
     }
 
