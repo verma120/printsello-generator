@@ -494,8 +494,8 @@
 <script>
 // Backend same domain par hai, isliye relative path use kar rahe hain —
 // isse "https://" typo ki koi gunjaish nahi rehti.
-const BACKEND_URL = "/api/generate";
-const EXTRACT_BACKEND_URL = "/api/extract";
+const BACKEND_URL = "https://printsello-generator.vercel.app/api/generate";
+const EXTRACT_BACKEND_URL = "https://printsello-generator.vercel.app/api/extract";
 
 if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
