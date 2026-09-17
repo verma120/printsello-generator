@@ -228,6 +228,33 @@
   .copy-btn.alt{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
   .copy-btn.alt:hover{border-color:var(--navy);}
   .copy-btn.done{background:var(--green);}
+  .copy-btn.small{padding:6px 11px;font-size:11.5px;}
+
+  .history-item{
+    display:flex;align-items:center;gap:12px;padding:14px 16px;
+    border:1px solid var(--line);border-radius:12px;margin-bottom:10px;
+    background:#fbfcfd;
+  }
+  .history-item .hi-info{flex:1;min-width:0;}
+  .history-item .hi-title{font-weight:700;font-size:13.5px;color:var(--navy);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .history-item .hi-meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .history-item .hi-actions{display:flex;gap:6px;flex-shrink:0;}
+  .history-item button{
+    background:var(--navy);color:#fff;border:none;border-radius:7px;
+    padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .history-item button.del{background:#fff;color:var(--red-dark);border:1px solid var(--line);}
+
+  .batch-row{
+    display:flex;align-items:center;gap:10px;padding:10px 14px;
+    border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fbfcfd;
+  }
+  .batch-row .b-title{flex:1;font-size:12.5px;font-weight:600;color:var(--navy);}
+  .batch-row .b-status{font-size:11.5px;color:var(--ink-soft);}
+  .batch-row.done .b-status{color:var(--green);font-weight:600;}
+  .batch-row.err .b-status{color:var(--red-dark);font-weight:600;}
 
   textarea#htmlCode{
     width:100%;height:520px;
@@ -334,7 +361,34 @@
     <div class="panel-head"><div class="idx">1</div><h2>Job Details भरें</h2></div>
     <div class="panel-body">
 
-      <div class="field">
+      <div class="row2">
+        <div class="field">
+          <label>Post Type</label>
+          <select id="postType">
+            <option value="Recruitment" selected>Recruitment (नई भर्ती)</option>
+            <option value="Result">Result (परिणाम)</option>
+            <option value="AdmitCard">Admit Card</option>
+            <option value="AnswerKey">Answer Key</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="pdf-upload" style="margin-bottom:0;padding:9px 14px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--navy);margin:0;">
+              <input type="checkbox" id="batchMode" onchange="toggleBatchMode()" style="width:15px;height:15px;margin:0;">
+              📋 Batch Mode (multiple titles ek saath)
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" id="batchTitlesField" style="display:none;">
+        <label>Job Titles (ek line me ek title)</label>
+        <textarea id="batchTitles" placeholder="UP Police Constable Bharti 2026&#10;Bihar SSC Clerk Recruitment 2026&#10;Railway Group D Recruitment 2026" style="min-height:100px;"></textarea>
+        <p class="hint">Har line ek alag Job Title samjha jaayega — baaki sab fields (Board, Vacancy, etc.) sabhi titles ke liye common rahenge.</p>
+      </div>
+
+      <div class="field" id="jobTitleField">
         <label>Job Title *</label>
         <input type="text" id="jobTitle" placeholder="जैसे: UP Police Constable Bharti 2026">
       </div>
@@ -351,7 +405,19 @@
         <div class="field">
           <label>Author Name</label>
           <input type="text" id="authorName" value="Satish Verma" placeholder="जैसे: Satish Verma">
-          <p class="hint" style="margin-top:5px;">Article के bottom में "Printsello – [naam]" author box में दिखेगा।</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Author Photo (Optional)</label>
+        <div class="pdf-upload" style="margin-bottom:0;">
+          <label class="pdf-btn" for="authorPhoto">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+            Photo Upload करें
+          </label>
+          <input type="file" id="authorPhoto" accept="image/*" onchange="previewAuthorPhoto(this.files[0])">
+          <img id="authorPhotoPreview" style="display:none;width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--line);">
+          <div class="pdf-info" id="authorPhotoLabel">Article के bottom author box में aapki photo दिखेगी।</div>
         </div>
       </div>
 
@@ -362,7 +428,7 @@
           PDF Upload करें
         </label>
         <input type="file" id="pdfUpload" accept="application/pdf" onchange="extractFromPDF(this.files[0])">
-        <div class="pdf-info"><b>Auto-Fill:</b> PDF upload karte hi neeche ke fields apne aap bhar jaayenge.</div>
+        <div class="pdf-info"><b>Auto-Fill:</b> PDF upload karte hi Job Title (SEO-friendly) samet neeche ke saare fields apne aap bhar jaayenge.</div>
       </div>
       <div class="pdf-status" id="pdfStatus"></div>
 
@@ -395,15 +461,37 @@
         <input type="text" id="eligibility" placeholder="जैसे: 12वीं Pass + Age 18-25 Years">
       </div>
 
-      <div class="row2">
+      <div class="section-sub">📅 Important Dates</div>
+
+      <div class="row3">
         <div class="field">
-          <label>आवेदन की अंतिम तिथि (Last Date)</label>
+          <label>Advertisement Date</label>
+          <input type="text" id="advertisementDate" placeholder="जैसे: 01/12/2025">
+        </div>
+        <div class="field">
+          <label>Application Start Date</label>
+          <input type="text" id="appStartDate" placeholder="जैसे: 05/12/2025">
+        </div>
+        <div class="field">
+          <label>Application Last Date</label>
           <input type="text" id="lastDate" placeholder="जैसे: 15/01/2026">
         </div>
+      </div>
+
+      <div class="row2">
         <div class="field">
-          <label>महत्वपूर्ण तिथियां (Important Dates)</label>
-          <input type="text" id="importantDates" placeholder="Start, Exam, Admit Card date etc.">
+          <label>Form Correction Start Date</label>
+          <input type="text" id="correctionStartDate" placeholder="Optional">
         </div>
+        <div class="field">
+          <label>Form Correction Last Date</label>
+          <input type="text" id="correctionLastDate" placeholder="Optional">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>अन्य तिथियां (Exam Date, Admit Card, etc. — Optional)</label>
+        <input type="text" id="importantDates" placeholder="जैसे: Exam Date: 10/02/2026, Admit Card: 01/02/2026">
       </div>
 
       <div class="field">
@@ -414,17 +502,49 @@
       <div class="field">
         <label>अतिरिक्त जानकारी (Additional Notes, Optional)</label>
         <textarea id="additionalNotes" placeholder="Koi aur detail jo upar ke fields me cover nahi hui — Selection Process, Age Relaxation, etc."></textarea>
-        <p class="hint">जितनी ज्यादा real details देंगे, article उतना ही accurate बनेगा। जो field khaali chhodenge use article में "Not Mentioned – Official Notification देखें" लिखा जाएगा — कोई गलत जानकारी invent नहीं होगी।</p>
+        <p class="hint">Sirf Job Title bharkar bhi article generate ho sakta hai — AI baaki details ke liye web search karega. Jitni zyada real details denge, utna accurate rahega. Jo field na mile use "Not Mentioned – Official Notification देखें" likha jaayega.</p>
       </div>
 
       <div class="row2">
         <div class="field">
-          <label>Official Website</label>
+          <label>Official Website (Board ki site)</label>
           <input type="text" id="officialSite" placeholder="Optional">
         </div>
         <div class="field">
           <label>Apply / PDF Link</label>
           <input type="text" id="applyLink" placeholder="Optional">
+        </div>
+      </div>
+
+      <div class="section-sub">🔗 Printsello Branding (Article Footer में दिखेगा)</div>
+
+      <div class="field">
+        <label>अपनी Website Link</label>
+        <input type="text" id="websiteLink" placeholder="जैसे: https://printsello.com">
+      </div>
+
+      <div class="row3">
+        <div class="field">
+          <label>Facebook</label>
+          <input type="text" id="socialFb" placeholder="Optional URL">
+        </div>
+        <div class="field">
+          <label>Instagram</label>
+          <input type="text" id="socialIg" placeholder="Optional URL">
+        </div>
+        <div class="field">
+          <label>YouTube</label>
+          <input type="text" id="socialYt" placeholder="Optional URL">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Telegram</label>
+          <input type="text" id="socialTg" placeholder="Optional URL">
+        </div>
+        <div class="field">
+          <label>WhatsApp Channel</label>
+          <input type="text" id="socialWa" placeholder="Optional URL">
         </div>
       </div>
 
@@ -446,6 +566,7 @@
       <div class="tab active" data-tab="preview" onclick="switchTab('preview')">Live Preview</div>
       <div class="tab" data-tab="code" onclick="switchTab('code')">HTML Code</div>
       <div class="tab" data-tab="social" onclick="switchTab('social')">Social Posts</div>
+      <div class="tab" data-tab="history" onclick="switchTab('history')">History</div>
     </div>
 
     <div class="tabcontent active" id="tab-preview">
@@ -472,6 +593,11 @@
         <div class="code-toolbar">
           <button class="copy-btn" onclick="copyHtml()" id="copyHtmlBtn">Copy Full HTML Code</button>
           <button class="copy-btn alt" onclick="downloadHtml()">Download .html</button>
+          <button class="copy-btn alt" onclick="publishToBlogger()">📤 Blogger पर Publish करें</button>
+        </div>
+        <div class="code-toolbar" style="margin-top:8px;">
+          <button class="copy-btn alt small" onclick="regenerateSection('FAQ')" id="regenFaqBtn">🔄 FAQ Regenerate</button>
+          <button class="copy-btn alt small" onclick="regenerateSection('DATES')" id="regenDatesBtn">🔄 Dates Regenerate</button>
         </div>
         <textarea id="htmlCode" spellcheck="false" readonly></textarea>
       </div>
@@ -485,6 +611,15 @@
       </div>
       <div id="socialFilled" style="display:none;"></div>
     </div>
+
+    <div class="tabcontent" id="tab-history">
+      <div id="historyEmpty" class="empty-state">
+        <div class="seal-big">🗂️</div>
+        <h3>अभी कोई Draft History नहीं है</h3>
+        <p>Jaise hi aap article generate karenge, wo yahan save ho jaayega (is browser me, last 15 tak) — dobara khol sakte hain bina regenerate kiye.</p>
+      </div>
+      <div id="historyFilled" style="display:none;"></div>
+    </div>
   </div>
 
 </div>
@@ -494,16 +629,23 @@
 <script>
 // Backend same domain par hai, isliye relative path use kar rahe hain —
 // isse "https://" typo ki koi gunjaish nahi rehti.
-const BACKEND_URL = "https://printsello-generator.vercel.app/api/generate";
-const EXTRACT_BACKEND_URL = "https://printsello-generator.vercel.app/api/extract";
+const BACKEND_URL = "/api/generate";
+const EXTRACT_BACKEND_URL = "/api/extract";
 
 if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
 
+function toggleBatchMode(){
+  const on = document.getElementById('batchMode').checked;
+  document.getElementById('batchTitlesField').style.display = on ? 'block' : 'none';
+  document.getElementById('jobTitleField').style.display = on ? 'none' : 'block';
+}
+
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
   document.querySelectorAll('.tabcontent').forEach(c=>c.classList.toggle('active', c.id==='tab-'+name));
+  if(name === 'history'){ renderHistory(); }
 }
 
 const statusSteps = [
@@ -523,27 +665,51 @@ function setStatus(stepIndex, box){
   }).join('');
 }
 
-function buildPrompt(title, lang, fields, site, applyLink){
+function buildPrompt(title, lang, fields, site, applyLink, postType){
   const structuredBlock = [
     ['भर्ती बोर्ड (Recruitment Board)', fields.board],
     ['पद का नाम (Post Name)', fields.postName],
     ['कुल पद (Total Vacancy)', fields.vacancy],
     ['योग्यता (Eligibility)', fields.eligibility],
     ['वेतन (Salary)', fields.salary],
-    ['आवेदन की अंतिम तिथि (Last Date)', fields.lastDate],
-    ['महत्वपूर्ण तिथियां (Important Dates)', fields.importantDates],
+    ['Advertisement Date', fields.advertisementDate],
+    ['Application Start Date', fields.appStartDate],
+    ['Application Last Date', fields.lastDate],
+    ['Form Correction Start Date', fields.correctionStartDate],
+    ['Form Correction Last Date', fields.correctionLastDate],
+    ['अन्य तिथियां (Other Dates)', fields.importantDates],
     ['आवेदन प्रक्रिया (Application Process)', fields.applicationProcess],
   ].map(([label, val]) => `${label}: ${val || 'Not Provided'}`).join('\n');
 
-  return `Tum ek professional Indian Sarkari Naukri blogger, SEO expert aur Blogger HTML/CSS designer ho.
+  const socialBlock = [
+    ['Website', fields.websiteLink],
+    ['Facebook', fields.socialFb],
+    ['Instagram', fields.socialIg],
+    ['YouTube', fields.socialYt],
+    ['Telegram', fields.socialTg],
+    ['WhatsApp Channel', fields.socialWa],
+  ].filter(([,v]) => v).map(([label, val]) => `${label}: ${val}`).join('\n') || 'Koi social link nahi diya gaya — social share section me generic share buttons (native share intent) use karo, links skip kar do.';
+
+  const postTypeGuide = ({
+    Recruitment: 'Ye ek NAYI BHARTI/RECRUITMENT ka post hai — poora template use karo: Overview, Vacancy, Eligibility, Salary, Dates timeline, Apply Steps, FAQ.',
+    Result: 'Ye ek RESULT (परिणाम) ka post hai — chhota rakho (500-600 words). Focus: Result kab declare hua, Result kaise check karein (step-by-step), Direct Result Link, Merit List/Cutoff (agar diya gaya), Next Steps (document verification/interview date agar pata ho). Vacancy/Salary/Eligibility cards SKIP kar do agar unse related detail na di gayi ho — inhe zabardasti mat banao.',
+    AdmitCard: 'Ye ek ADMIT CARD post hai — chhota rakho (500-600 words). Focus: Admit Card kab release hua, Download kaise karein (step-by-step), Exam Date, Exam Center/City info (agar diya gaya), Documents le jaane hain (ID proof etc.). Vacancy/Salary cards SKIP kar do.',
+    AnswerKey: 'Ye ek ANSWER KEY post hai — chhota rakho (500-600 words). Focus: Answer Key kab release hui, Kaise check/download karein, Objection darj karne ki last date aur process (agar diya gaya), Final Answer Key kab aayegi. Vacancy/Salary cards SKIP kar do.'
+  })[postType] || 'Ye ek NAYI BHARTI/RECRUITMENT ka post hai — poora template use karo.';
+
+  const todayStr = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+
+  return `Tum ek professional Indian Sarkari Naukri blogger, SEO expert aur Blogger HTML/CSS designer ho, jo modern premium Sarkari Naukri blogs (jaise sarkariresult.com, freejobalert.com ke best design patterns) se inspired ek best-in-class article design banate ho.
 
 TASK: Job Title ke base par ek complete Blogger-ready Govt Job article banao.
+POST TYPE: ${postType || 'Recruitment'} — ${postTypeGuide}
 
 JOB TITLE: ${title}
 CONTENT LANGUAGE: ${lang}
+TODAY'S DATE: ${todayStr}
 AUTHOR NAME: ${fields.authorName || 'Satish Verma'}
 BRAND NAME: Printsello
-OFFICIAL WEBSITE (agar diya gaya): ${site || 'Not Provided'}
+OFFICIAL WEBSITE (Board ki site, agar diya gaya): ${site || 'Not Provided'}
 APPLY / PDF LINK (agar diya gaya): ${applyLink || 'Not Provided'}
 
 USER-PROVIDED STRUCTURED NOTIFICATION DETAILS (sabse zyada accurate source, isi ko priority do):
@@ -556,42 +722,62 @@ ADDITIONAL NOTES FROM USER:
 ${fields.additionalNotes || 'Koi additional note nahi di gayi.'}
 """
 
-CRITICAL RULE: Agar koi field (vacancy, last date, age limit, salary, fees, qualification, selection process) na to job title se na hi user details se pata chale, to us field me exactly likho: "Not Mentioned – Official Notification Verify Karein". Kabhi bhi fake numbers, fake dates ya fake salary invent mat karo.
+PRINTSELLO SOCIAL / BRAND LINKS (footer aur author box me use karne ke liye):
+"""
+${socialBlock}
+"""
 
-AUTHOR BOX RULE: Article ke bilkul BOTTOM me (conclusion/FAQ ke baad, related posts se pehle) ek dedicated "Author Bio Box" card zaroor banao — usme round avatar (author ke naam ke initials), naam "${fields.authorName || 'Satish Verma'}", brand line "Printsello" (bold, accent color me), 1-2 line generic bio ("Sarkari Naukri updates par likhta/likhti hai, ${fields.authorName || 'Satish Verma'} Printsello team ka hissa hai"), aur chhote social icons (dummy links) ka row. Ye top wale hero-header author line ke ALAWA hai — top wala bhi rehne do, bottom wala naya add karo. Baaki poori design/CSS/structure/features EXACTLY wahi rakho jo pehle se specify ki gayi hai, bas isse aur polish/premium feel do.
+WEB SEARCH RULE: Agar structured details ya additional notes me koi field khaali/"Not Provided" hai, to us specific fact ke liye web search karke official/reliable source se real jaankari nikaalo (jaise actual vacancy number, actual dates, actual salary). Sirf tab "Not Mentioned – Official Notification Verify Karein" likho jab web search se bhi genuinely kuch na mile. Kabhi bhi fake/guessed specific numbers ya dates invent mat karo — agar unsure ho to hamesha "Verify Karein" wala safe fallback use karo.
 
-Tumhe teeko exactly is format me, in delimiters ke saath, output dena hai — delimiters ke bahar KUCH bhi mat likhna (no preamble, no explanation, no markdown fences):
+AUTHOR BOX RULE: Article ke bilkul BOTTOM me (conclusion/FAQ ke baad, related posts se pehle) ek dedicated "Author Bio Box" card zaroor banao — usme round avatar image (${fields.authorPhoto ? 'neeche prompt ke end me di gayi "ACTUAL AUTHOR PHOTO DATA URI" ko exactly <img src> me use karo' : 'author ke naam ke initials wala colored circle avatar'}), naam "${fields.authorName || 'Satish Verma'}", brand line "Printsello" (bold, accent color me), 1-2 line generic bio, aur social icons row jo upar diye gaye SOCIAL/BRAND LINKS ko use kare (jo link nahi diya gaya wo icon skip kar do, dummy '#' mat use karo). Ye top wale hero-header author line ke ALAWA hai — top wala bhi rehne do, bottom wala naya add karo.
+
+FEATURED/HERO IMAGE RULE: Agar prompt ke end me "FEATURED IMAGE URL" diya gaya ho, to usi exact URL ko hero image ke src me use karo (placeholder mat use karna).
+
+TRUST (E-E-A-T) RULE: Hero ke paas ek chhota "Last Updated: ${todayStr}" badge zaroor dikhao. Author Bio Box se thoda upar ek chhota "Sources" line/box do jisme officialWebsite/applyLink (jo bhi diya gaya ho) ko "Official Notification Source" ke roop me link karo — agar dono khaali hain to ye section skip kar do.
+
+SECTION MARKER RULE (bahut important): Article HTML ke andar FAQ section ko exactly in HTML comments se wrap karo: <!--FAQ_SECTION_START--> ... poora FAQ block ... <!--FAQ_SECTION_END-->. Aur Important Dates timeline section ko exactly in comments se wrap karo: <!--DATES_SECTION_START--> ... poora dates timeline block ... <!--DATES_SECTION_END-->. Ye comments HTML me hamesha rehne chahiye (invisible hote hain page par), taaki baad me sirf wo section alag se regenerate ho sake.
+
+SEO META TAGS RULE: <head> jaisa kuch nahi hoga (ye Blogger body snippet hai), lekin phir bhi article ke bilkul upar ek chhota hidden div (style="display:none") me Open Graph aur Twitter Card meta jaisi info bhi text ke roop me daal do (og:title, og:description, twitter:title) taaki user Blogger ke Post Settings me manually daal sake. Har <img> tag me descriptive, SEO-optimized alt text zaroor do (generic "image" jaisa alt kabhi mat likhna).
+
+Tumhe reply exactly is format me, in delimiters ke saath, output dena hai — delimiters ke bahar KUCH bhi mat likhna (no preamble, no explanation, no markdown fences):
 
 ###SEO_META_START###
-(Yahan sirf ye likho: SEO Title, Meta Title, Meta Description, Focus Keyword, LSI Keywords comma separated, URL Slug — har ek naye line par label ke saath)
+(Yahan sirf ye likho: SEO Title (clickable, keyword-rich, under 60 chars), Meta Title, Meta Description, Focus Keyword, LSI Keywords comma separated, URL Slug, OG Title, OG Description — har ek naye line par label ke saath)
 ###SEO_META_END###
 
 ###ARTICLE_HTML_START###
-(Yahan ek COMPLETE single self-contained HTML block do jo seedha Blogger "HTML View" me paste karne layak ho. Isme ye sab ek hi file me included ho:
-- <style> tag me pura CSS: primary color #e63946, secondary #1d3557, background #f8f9fa, card #ffffff, border-radius 18px, soft shadows, hover effects, gradient buttons, glass effect, dark mode toggle support via class, Poppins font headings, Inter font body (Google Fonts link included)
-- Reading progress bar (JS + CSS)
-- Breaking news badge, gradient hero header, featured image placeholder (use a descriptive alt text, use a placeholder image url like https://via.placeholder.com/1200x600), job title, publish date (today), author box, reading time estimate
-- Quick Overview card, Job Summary card, Alert box, Table of Contents (with anchor links), Vacancy table, Eligibility card, Salary card, Age limit card, Important Dates timeline, Selection Process card, Apply Steps card, Important Links card (with placeholder hrefs if not given), FAQ accordion (min 6 Q&A) with working JS toggle, Related Jobs section (3 dummy relevant titles), Social Share buttons, Tags, Previous/Next post links (dummy)
-- Floating sticky Apply button, Telegram join floating button, WhatsApp share floating button
-- Bottom CTA box, comment box placeholder, related article slider (simple CSS/JS)
-- Dark mode toggle button (working, toggles a class on a wrapper and swaps CSS variables), Print button (window.print), Copy Full Article button, Copy HTML button, Copy FAQ button, Copy Schema button, Scroll to top button, lazy loading on images (loading="lazy"), smooth scroll CSS
-- JSON-LD Schema markup: JobPosting schema, FAQPage schema, BreadcrumbList schema — populated with real extracted data, using "Not Mentioned" placeholders where unknown, never fake specific numbers
-- Full <script> at the end with all JS needed for above features (progress bar, accordion, dark mode, copy buttons, scroll to top) — vanilla JS only, no external library dependency
-- Main body content must be 1200+ words of natural, human-sounding, AdSense-safe Sarkari Naukri article content, structured with H1/H2/H3, written in ${lang}, covering: introduction, overview, eligibility, vacancy details, important dates, selection process, how to apply steps, FAQs, conclusion with CTA
-This must be ONE complete valid HTML fragment — style tag, body html, script tag, all together, no missing closing tags.)
+(SPEED RULE — ye sabse important hai: Concise, lean code likho. Koi filler/repetitive sentence nahi, koi duplicate section nahi, CSS me sirf zaroori rules (extra unused classes mat likho). Poora article efficiently likho — quality kam nahi honi chahiye, par har word/line purposeful ho, kahin bhi word-padding ya repeat mat karo.
+
+Yahan ek COMPLETE single self-contained HTML block do jo seedha Blogger "HTML View" me paste karne layak ho. DESIGN GOAL: pehli nazar me hi "wow, ye professional hai" laga de — aur saath me AI answer engines (ChatGPT/Perplexity/Google AI Overview) ke liye bhi easily quotable/citable ho. Isme ye included ho:
+
+- <style> tag me lean CSS: primary #e63946, secondary #1d3557, background #f8f9fa, card #ffffff, radius 16px, soft shadow, hover-lift on cards/buttons, gradient CTA buttons, Poppins (headings) + Inter (body) Google Fonts
+- Reading progress bar (thin, top-fixed)
+- Hero: featured image (full-width, rounded, subtle dark gradient overlay + title text on top for punch), job title (bada bold, curiosity-driven), "Last Updated" badge (TRUST RULE), author line (photo/avatar + naam), reading time
+- TL;DR "QUICK ANSWER" box turant hero ke neeche — 3-4 bullet me sabse important facts ek nazar me — ye AI answer engines ke liye bhi best hai aur readers ko turant hook karta hai
+- Sticky Table of Contents (anchor links)
+${postType==='Recruitment' || !postType ? '- Overview card grid, Vacancy table, Eligibility card, Salary card\n- IMPORTANT DATES: SECTION MARKER RULE ke comments ke saath ek CSS timeline (dots + line) — Advertisement/Start/Last/Correction dates, jo "Not Provided" ho use skip karo\n- Apply Steps (numbered), Important Links card (real applyLink/officialWebsite use karo)' : '- POST TYPE ke hisaab se relevant cards (upar POST TYPE guide dekho) — sirf wahi banao jo us post type ke liye relevant hai, generic Recruitment cards zabardasti mat thoso'}
+- Prominent gradient CTA button (applyLink → officialWebsite → '#' fallback order)
+- FAQ section — SECTION MARKER RULE ke comments ke saath wrap karo. HAR question format me likho jaisa log Google/ChatGPT me poochte hain (natural phrasing), aur question ke turant baad EK seedha 1-2 line ka direct answer do (elaboration baad me) — ye AI Overviews/ChatGPT dwara quote hone ke chances badhata hai. Min 6 Q&A, working accordion toggle.
+- Social Share bar: sirf wahi icons dikhao jinke links diye gaye hain (SOCIAL/BRAND LINKS se)
+- Sources line/box (TRUST RULE)
+- Author Bio Box (AUTHOR BOX RULE ke hisaab se, bottom me)
+- Scroll-to-top button, lazy loading images (loading="lazy"), SEO alt text har image par
+- JSON-LD: JobPosting/Article + FAQPage + BreadcrumbList schema, real/researched data ke saath
+- Ek chhota <script> — sirf progress bar, FAQ accordion, scroll-to-top ke liye. Extra features (dark mode, print, copy buttons) MAT banao — ye tokens waste karte hain aur zaroori nahi hain.
+- Main body: ${postType && postType!=='Recruitment' ? '500-600' : '700-900'} words (ispe hi ruko, isse zyada mat likho) — sharp, scannable, human-sounding Hindi/Hinglish/English (${lang}), short paragraphs (2-3 lines max), bullet points jaha useful ho. Koi paragraph filler ya repetition nahi.
+
+ONE complete valid HTML fragment — style + body + script sab saath, koi tag incomplete na ho.)
 ###ARTICLE_HTML_END###
 
 ###SOCIAL_START###
 YOUTUBE_TITLE: ...
-YOUTUBE_DESCRIPTION: ...
 TELEGRAM_POST: ...
 WHATSAPP_TEXT: ...
 INSTAGRAM_CAPTION: ...
 FACEBOOK_POST: ...
-PUSH_NOTIFICATION: ...
 ###SOCIAL_END###
 
-Content AI-generated jaisa nahi lagna chahiye, natural human blogger tone use karo. Poori tarah AdSense-safe rakho — koi banned/sensitive claim mat karo.`;
+Content AI-generated jaisa nahi lagna chahiye, natural human blogger tone use karo. Poori tarah AdSense-safe rakho — koi banned/sensitive claim mat karo. Concise raho, koi unnecessary padding mat karo — speed aur token-efficiency priority hai.${fields.authorPhoto ? '\n\nACTUAL AUTHOR PHOTO DATA URI (use this FULL string exactly as the <img src> in the author bio box, mat truncate karna):\n' + fields.authorPhoto : ''}`;
 }
 
 function extractBetween(text, startTag, endTag){
@@ -601,26 +787,77 @@ function extractBetween(text, startTag, endTag){
   return text.substring(s+startTag.length, e).trim();
 }
 
-async function generateArticle(){
-  const title = document.getElementById('jobTitle').value.trim();
-  const lang = document.getElementById('lang').value;
-  const site = document.getElementById('officialSite').value.trim();
-  const applyLink = document.getElementById('applyLink').value.trim();
-  const btn = document.getElementById('generateBtn');
-  const box = document.getElementById('statusBox');
-
-  const fields = {
+function gatherCommonFields(){
+  return {
     authorName: document.getElementById('authorName').value.trim(),
+    authorPhoto: window.__authorPhotoDataUri || '',
     board: document.getElementById('board').value.trim(),
     postName: document.getElementById('postName').value.trim(),
     vacancy: document.getElementById('vacancy').value.trim(),
     eligibility: document.getElementById('eligibility').value.trim(),
     salary: document.getElementById('salary').value.trim(),
+    advertisementDate: document.getElementById('advertisementDate').value.trim(),
+    appStartDate: document.getElementById('appStartDate').value.trim(),
     lastDate: document.getElementById('lastDate').value.trim(),
+    correctionStartDate: document.getElementById('correctionStartDate').value.trim(),
+    correctionLastDate: document.getElementById('correctionLastDate').value.trim(),
     importantDates: document.getElementById('importantDates').value.trim(),
     applicationProcess: document.getElementById('applicationProcess').value.trim(),
     additionalNotes: document.getElementById('additionalNotes').value.trim(),
+    websiteLink: document.getElementById('websiteLink').value.trim(),
+    socialFb: document.getElementById('socialFb').value.trim(),
+    socialIg: document.getElementById('socialIg').value.trim(),
+    socialYt: document.getElementById('socialYt').value.trim(),
+    socialTg: document.getElementById('socialTg').value.trim(),
+    socialWa: document.getElementById('socialWa').value.trim(),
   };
+}
+
+async function callGenerateAPI(prompt, imageQuery){
+  const response = await fetch(BACKEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, imageQuery })
+  });
+
+  const rawBody = await response.text();
+  let data;
+  try{
+    data = JSON.parse(rawBody);
+  }catch(parseErr){
+    throw new Error('Server se JSON nahi mila (status '+response.status+'). Raw response: ' + rawBody.slice(0, 150));
+  }
+
+  if(!response.ok){
+    throw new Error(data.error || ('Server error (status ' + response.status + ')'));
+  }
+
+  const fullText = (data.content || []).map(b => b.text || '').join('\n');
+  const seoMeta = extractBetween(fullText, '###SEO_META_START###', '###SEO_META_END###');
+  const articleHtml = extractBetween(fullText, '###ARTICLE_HTML_START###', '###ARTICLE_HTML_END###');
+  const socialRaw = extractBetween(fullText, '###SOCIAL_START###', '###SOCIAL_END###');
+
+  if(!articleHtml){
+    throw new Error('Article HTML nahi mil paya. Response incomplete tha, dobara try karein.');
+  }
+
+  return { seoMeta, articleHtml, socialRaw };
+}
+
+async function generateArticle(){
+  if(document.getElementById('batchMode').checked){
+    return runBatchGenerate();
+  }
+
+  const title = document.getElementById('jobTitle').value.trim();
+  const lang = document.getElementById('lang').value;
+  const site = document.getElementById('officialSite').value.trim();
+  const applyLink = document.getElementById('applyLink').value.trim();
+  const postType = document.getElementById('postType').value;
+  const btn = document.getElementById('generateBtn');
+  const box = document.getElementById('statusBox');
+
+  const fields = gatherCommonFields();
 
   if(!title){
     alert('कृपया पहले Job Title डालें।');
@@ -633,39 +870,12 @@ async function generateArticle(){
 
   try{
     setStatus(1, box);
-    const prompt = buildPrompt(title, lang, fields, site, applyLink);
-
-    const response = await fetch(BACKEND_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt })
-    });
+    const prompt = buildPrompt(title, lang, fields, site, applyLink, postType);
+    const imageQuery = [fields.postName, fields.board].filter(Boolean).join(' ') || title;
 
     setStatus(2, box);
-    const rawBody = await response.text();
-    let data;
-    try{
-      data = JSON.parse(rawBody);
-    }catch(parseErr){
-      throw new Error('Server se JSON nahi mila (status '+response.status+'). Raw response: ' + rawBody.slice(0, 150));
-    }
-
-    if(!response.ok){
-      throw new Error(data.error || ('Server error (status ' + response.status + ')'));
-    }
-
-    const fullText = (data.content || []).map(b => b.text || '').join('\n');
-
-    setStatus(3, box);
-    const seoMeta = extractBetween(fullText, '###SEO_META_START###', '###SEO_META_END###');
-    const articleHtml = extractBetween(fullText, '###ARTICLE_HTML_START###', '###ARTICLE_HTML_END###');
-    const socialRaw = extractBetween(fullText, '###SOCIAL_START###', '###SOCIAL_END###');
-
+    const { seoMeta, articleHtml, socialRaw } = await callGenerateAPI(prompt, imageQuery);
     setStatus(4, box);
-
-    if(!articleHtml){
-      throw new Error('Article HTML nahi mil paya. Response incomplete tha, dobara try karein.');
-    }
 
     document.getElementById('previewEmpty').style.display = 'none';
     document.getElementById('previewFilled').style.display = 'block';
@@ -676,6 +886,7 @@ async function generateArticle(){
     document.getElementById('htmlCode').value = articleHtml;
 
     renderSocial(socialRaw, seoMeta);
+    saveDraft(title, articleHtml, seoMeta, socialRaw);
 
     box.classList.remove('show');
     switchTab('preview');
@@ -685,6 +896,58 @@ async function generateArticle(){
     btn.disabled = false;
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg> Full Article Generate करें';
   }
+}
+
+async function runBatchGenerate(){
+  const raw = document.getElementById('batchTitles').value.trim();
+  const titles = raw.split('\n').map(t=>t.trim()).filter(Boolean);
+  if(titles.length === 0){
+    alert('कृपया कम से कम एक Job Title डालें (हर line में एक)।');
+    return;
+  }
+
+  const lang = document.getElementById('lang').value;
+  const site = document.getElementById('officialSite').value.trim();
+  const applyLink = document.getElementById('applyLink').value.trim();
+  const postType = document.getElementById('postType').value;
+  const fields = gatherCommonFields();
+  const btn = document.getElementById('generateBtn');
+
+  btn.disabled = true;
+  switchTab('history');
+  document.getElementById('historyEmpty').style.display = 'none';
+  document.getElementById('historyFilled').style.display = 'block';
+
+  const batchBox = document.createElement('div');
+  batchBox.id = 'batchProgressBox';
+  batchBox.style.marginBottom = '16px';
+  document.getElementById('historyFilled').prepend(batchBox);
+
+  const renderBatchRows = () => {
+    batchBox.innerHTML = titles.map((t,i)=>
+      `<div class="batch-row" id="batchRow${i}"><div class="b-title">${escapeHtml(t)}</div><div class="b-status">Pending...</div></div>`
+    ).join('');
+  };
+  renderBatchRows();
+
+  for(let i=0;i<titles.length;i++){
+    const row = document.getElementById('batchRow'+i);
+    row.querySelector('.b-status').textContent = 'Generating...';
+    try{
+      const prompt = buildPrompt(titles[i], lang, fields, site, applyLink, postType);
+      const imageQuery = [fields.postName, fields.board].filter(Boolean).join(' ') || titles[i];
+      const { seoMeta, articleHtml, socialRaw } = await callGenerateAPI(prompt, imageQuery);
+      saveDraft(titles[i], articleHtml, seoMeta, socialRaw);
+      row.classList.add('done');
+      row.querySelector('.b-status').textContent = '✓ Ho gaya';
+    }catch(err){
+      row.classList.add('err');
+      row.querySelector('.b-status').textContent = '⚠ Fail: ' + err.message.slice(0,60);
+    }
+  }
+
+  btn.disabled = false;
+  renderHistory();
 }
 
 function renderSocial(socialRaw, seoMeta){
@@ -762,6 +1025,157 @@ function downloadHtml(){
   URL.revokeObjectURL(url);
 }
 
+function publishToBlogger(){
+  const code = document.getElementById('htmlCode').value;
+  if(!code){ alert('Pehle ek article generate karein.'); return; }
+  navigator.clipboard.writeText(code).then(()=>{
+    window.open('https://www.blogger.com/blog/post/edit', '_blank');
+    alert('HTML copy ho gaya hai! Naye khule Blogger tab me: "HTML View" par switch karke Ctrl+V se paste kar dein.');
+  }).catch(()=>{
+    alert('Clipboard copy fail hui — "Copy Full HTML Code" button use karke manually copy karein, fir Blogger kholein.');
+  });
+}
+
+async function regenerateSection(section){
+  const currentHtml = document.getElementById('htmlCode').value;
+  if(!currentHtml){ alert('Pehle ek article generate karein.'); return; }
+
+  const markers = section === 'FAQ'
+    ? ['<!--FAQ_SECTION_START-->', '<!--FAQ_SECTION_END-->']
+    : ['<!--DATES_SECTION_START-->', '<!--DATES_SECTION_END-->'];
+
+  const startIdx = currentHtml.indexOf(markers[0]);
+  const endIdx = currentHtml.indexOf(markers[1]);
+  if(startIdx === -1 || endIdx === -1){
+    alert('Is article me ' + section + ' section marker nahi mila (shayad purane version se bana tha). Pura article dobara generate karein.');
+    return;
+  }
+
+  const btnId = section === 'FAQ' ? 'regenFaqBtn' : 'regenDatesBtn';
+  const btn = document.getElementById(btnId);
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Regenerating...';
+
+  try{
+    const fields = gatherCommonFields();
+    const title = document.getElementById('jobTitle').value.trim();
+    const lang = document.getElementById('lang').value;
+
+    const miniPrompt = section === 'FAQ'
+      ? `Neeche diya gaya ek Sarkari Naukri article ka FAQ section hai. Isi exact HTML/CSS class structure aur styling ko follow karte hue, ek NAYA/DIFFERENT set of 6+ FAQ Q&A likho (naye questions, naye answers, but SAME visual style/classes taaki design match rahe). Job Title: "${title}". Language: ${lang}. Sirf FAQ block ka HTML do, ${markers[0]} aur ${markers[1]} comments ke saath wrap karke, bahar kuch mat likho (no preamble, no markdown fences).\n\nCURRENT FAQ SECTION (style reference ke liye):\n"""\n${currentHtml.substring(startIdx, endIdx + markers[1].length)}\n"""`
+      : `Neeche diya gaya ek Sarkari Naukri article ka Important Dates timeline section hai. Isi exact HTML/CSS class structure aur styling ko follow karte hue, dates ko refresh/re-verify karke (agar koi naya info mile to web search karke) wahi timeline dobara banao. Job Title: "${title}". Sirf timeline block ka HTML do, ${markers[0]} aur ${markers[1]} comments ke saath wrap karke, bahar kuch mat likho (no preamble, no markdown fences).\n\nCURRENT DATES SECTION (style reference ke liye):\n"""\n${currentHtml.substring(startIdx, endIdx + markers[1].length)}\n"""\n\nUSER FIELDS: Advertisement: ${fields.advertisementDate||'N/A'}, Start: ${fields.appStartDate||'N/A'}, Last: ${fields.lastDate||'N/A'}, Correction Start: ${fields.correctionStartDate||'N/A'}, Correction Last: ${fields.correctionLastDate||'N/A'}, Other: ${fields.importantDates||'N/A'}`;
+
+    const response = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: miniPrompt })
+    });
+
+    const rawBody = await response.text();
+    const data = JSON.parse(rawBody);
+    if(!response.ok){ throw new Error(data.error || 'Server error'); }
+
+    const newSectionText = (data.content || []).map(b=>b.text||'').join('\n').trim();
+    const newBlock = extractBetween(newSectionText, markers[0], markers[1]);
+    const finalBlock = newBlock ? (markers[0] + newBlock + markers[1]) : newSectionText;
+
+    if(!finalBlock.includes(markers[0])){
+      throw new Error('Naya section sahi format me nahi mila, dobara try karein.');
+    }
+
+    const updatedHtml = currentHtml.substring(0, startIdx) + finalBlock + currentHtml.substring(endIdx + markers[1].length);
+    document.getElementById('htmlCode').value = updatedHtml;
+    document.getElementById('previewFrame').srcdoc = updatedHtml;
+  }catch(err){
+    alert('Regenerate fail hua: ' + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+// ---------- Draft History (localStorage) ----------
+const HISTORY_KEY = 'printsello_drafts_v1';
+const HISTORY_MAX = 15;
+
+function saveDraft(title, articleHtml, seoMeta, socialRaw){
+  try{
+    let drafts = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    drafts.unshift({
+      id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      title: title,
+      timestamp: new Date().toISOString(),
+      articleHtml, seoMeta, socialRaw
+    });
+    drafts = drafts.slice(0, HISTORY_MAX);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(drafts));
+  }catch(e){ /* storage full ya disabled — silently ignore */ }
+}
+
+function getDrafts(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+
+function renderHistory(){
+  const drafts = getDrafts();
+  const emptyEl = document.getElementById('historyEmpty');
+  const filledEl = document.getElementById('historyFilled');
+  const batchBox = document.getElementById('batchProgressBox');
+
+  if(drafts.length === 0 && !batchBox){
+    emptyEl.style.display = 'block';
+    filledEl.style.display = 'none';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  filledEl.style.display = 'block';
+
+  const list = drafts.map(d=>{
+    const dt = new Date(d.timestamp);
+    const dateStr = dt.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) + ' ' + dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="history-item">
+      <div class="hi-info">
+        <div class="hi-title">${escapeHtml(d.title)}</div>
+        <div class="hi-meta">${dateStr}</div>
+      </div>
+      <div class="hi-actions">
+        <button onclick="loadDraft('${d.id}')">Open</button>
+        <button class="del" onclick="deleteDraft('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // batchBox (agar abhi progress chal rahi hai) ko preserve karte hue list ke baad lagayein
+  const existingBatchBox = document.getElementById('batchProgressBox');
+  filledEl.innerHTML = (existingBatchBox ? existingBatchBox.outerHTML : '') + list;
+}
+
+function loadDraft(id){
+  const drafts = getDrafts();
+  const d = drafts.find(x => x.id === id);
+  if(!d) return;
+
+  document.getElementById('previewEmpty').style.display = 'none';
+  document.getElementById('previewFilled').style.display = 'block';
+  document.getElementById('previewFrame').srcdoc = d.articleHtml;
+
+  document.getElementById('codeEmpty').style.display = 'none';
+  document.getElementById('codeFilled').style.display = 'block';
+  document.getElementById('htmlCode').value = d.articleHtml;
+
+  renderSocial(d.socialRaw || '', d.seoMeta || '');
+  switchTab('preview');
+}
+
+function deleteDraft(id){
+  let drafts = getDrafts().filter(x => x.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(drafts));
+  renderHistory();
+}
+
 function setPdfStatus(msg, cls){
   const el = document.getElementById('pdfStatus');
   el.className = 'pdf-status show' + (cls ? ' ' + cls : '');
@@ -829,13 +1243,22 @@ async function extractFromPDF(file){
     setIf('vacancy', f.vacancy);
     setIf('eligibility', f.eligibility);
     setIf('salary', f.salary);
+    setIf('advertisementDate', f.advertisementDate);
+    setIf('appStartDate', f.appStartDate);
     setIf('lastDate', f.lastDate);
+    setIf('correctionStartDate', f.correctionStartDate);
+    setIf('correctionLastDate', f.correctionLastDate);
     setIf('importantDates', f.importantDates);
     setIf('applicationProcess', f.applicationProcess);
 
-    if(f.postName && !document.getElementById('jobTitle').value.trim()){
+    // SEO-friendly clickable title — hamesha suggest karo (chahe Job Title pehle se bhara ho),
+    // kyunki user ne khud kaha ki PDF se hi SEO title bane. Purana value ek console log me rakh dete hain.
+    if(f.seoTitle){
+      document.getElementById('jobTitle').value = f.seoTitle;
+    } else if(f.postName && !document.getElementById('jobTitle').value.trim()){
       document.getElementById('jobTitle').value = f.postName;
     }
+
     if(f.officialWebsite && !document.getElementById('officialSite').value.trim()){
       document.getElementById('officialSite').value = f.officialWebsite;
     }
@@ -843,10 +1266,43 @@ async function extractFromPDF(file){
       document.getElementById('applyLink').value = f.applyLink;
     }
 
-    setPdfStatus('Fields auto-fill ho gaye! Ek baar check kar lein.', 'ok');
+    setPdfStatus('Fields auto-fill ho gaye (SEO title samet)! Ek baar check kar lein.', 'ok');
   }catch(err){
     setPdfStatus('Error: ' + err.message, 'err');
   }
+}
+
+function previewAuthorPhoto(file){
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    document.getElementById('authorPhotoLabel').textContent = 'Sirf image file upload karein.';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      // Resize to max 200x200 taaki prompt payload chhota rahe
+      const size = 200;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      const dataUri = canvas.toDataURL('image/jpeg', 0.8);
+
+      window.__authorPhotoDataUri = dataUri;
+      const preview = document.getElementById('authorPhotoPreview');
+      preview.src = dataUri;
+      preview.style.display = 'inline-block';
+      document.getElementById('authorPhotoLabel').innerHTML = '<b>Photo select ho gayi!</b> Article generate karte waqt use ho jaayegi.';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 </script>
 </body>
