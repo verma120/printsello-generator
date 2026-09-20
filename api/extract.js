@@ -33,12 +33,17 @@ export default async function handler(req, res) {
     const schema = {
       type: 'OBJECT',
       properties: {
+        seoTitle: { type: 'STRING' },
         board: { type: 'STRING' },
         postName: { type: 'STRING' },
         vacancy: { type: 'STRING' },
         eligibility: { type: 'STRING' },
         salary: { type: 'STRING' },
+        advertisementDate: { type: 'STRING' },
+        appStartDate: { type: 'STRING' },
         lastDate: { type: 'STRING' },
+        correctionStartDate: { type: 'STRING' },
+        correctionLastDate: { type: 'STRING' },
         importantDates: { type: 'STRING' },
         applicationProcess: { type: 'STRING' },
         officialWebsite: { type: 'STRING' },
@@ -49,13 +54,18 @@ export default async function handler(req, res) {
     const prompt = `Neeche ek Official Government Job Notification se nikala gaya raw PDF text diya gaya hai. Isse ye fields nikalo aur JSON me do. Agar koi field notification me nahi mile to us field ki value khaali string "" rakho — kabhi bhi fake/guessed value mat do.
 
 Fields:
+- seoTitle: Ek clickable, SEO-friendly Hindi/Hinglish blog title banao is post ke liye — format jaisa "[Board/Department Name] [Post Name] Recruitment [Year] – Apply Online, Eligibility, Last Date". 60 characters ke aas-paas, keyword-rich, click-worthy.
 - board: Recruitment board/department/organisation ka naam
 - postName: Post/vacancy ka naam
 - vacancy: Total number of vacancies (number ke saath unit, jaise "313 Posts")
 - eligibility: Educational qualification + age limit summary (ek line me)
 - salary: Pay scale / salary range
-- lastDate: Application ki last date (jo bhi date format PDF me hai wahi rakho)
-- importantDates: Baaki important dates ek line me comma se separate (start date, exam date, admit card date, etc.)
+- advertisementDate: Notification/Advertisement release date
+- appStartDate: Online application start date
+- lastDate: Application ki last date
+- correctionStartDate: Form correction/edit window start date (agar mentioned ho)
+- correctionLastDate: Form correction/edit window last date (agar mentioned ho)
+- importantDates: Baaki important dates ek line me comma se separate (exam date, admit card date, result date, etc.) — advertisementDate/appStartDate/lastDate/correction dates ko yahan repeat mat karo
 - applicationProcess: Apply kaise karna hai uska short summary (online/offline, fees, steps)
 - officialWebsite: Agar koi official website URL mila ho
 - applyLink: Agar koi direct apply/application link mila ho
@@ -74,7 +84,7 @@ ${text}
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             maxOutputTokens: 2000,
-            temperature: 0.2,
+            temperature: 0.3,
             thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: schema
