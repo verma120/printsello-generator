@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, imageQuery } = req.body || {};
+    const { prompt, imageQuery, chosenImageUrl, needsSearch } = req.body || {};
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'Prompt missing in request body.' });
@@ -48,9 +48,9 @@ export default async function handler(req, res) {
 
     const MODEL = 'gemini-2.5-flash';
 
-    // Try to fetch a relevant featured image (free, via Pexels). Silently
-    // skipped if PEXELS_API_KEY isn't configured — article still works fine.
-    const imageUrl = await fetchFeaturedImage(imageQuery || 'government office india');
+    // Agar user ne "Image Generate करें" tool se khud image choose ki hai,
+    // usi ko priority do — warna Pexels se auto-fetch karo.
+    const imageUrl = chosenImageUrl || await fetchFeaturedImage(imageQuery || 'government office india');
     const finalPrompt = imageUrl
       ? `${prompt}\n\nFEATURED IMAGE URL (use this exact URL for the hero/featured image src): ${imageUrl}`
       : prompt;
@@ -64,10 +64,9 @@ export default async function handler(req, res) {
           contents: [{ parts: [{ text: finalPrompt }] }],
           ...(useSearch ? { tools: [{ google_search: {} }] } : {}),
           generationConfig: {
-            // Content ab lean/concise instructions ke saath likha ja raha hai
-            // (~800 words + trimmed CSS/JS), lekin Google Search grounding
-            // khud bhi tokens use karti hai, isliye ceiling thodi generous rakhi.
-            maxOutputTokens: 24000,
+            // Search ab sirf zaroorat par chalti hai (needsSearch flag), isliye
+            // normal case me ye ceiling sirf ek safety margin hai.
+            maxOutputTokens: 30000,
             temperature: 0.7,
             // Gemini 2.5 models "think" before answering, and those thinking
             // tokens are deducted from maxOutputTokens too. Turning thinking
@@ -80,16 +79,16 @@ export default async function handler(req, res) {
 
     // Google Search grounding needs a billing-enabled key on some account
     // types, AND its search results themselves consume output-token budget.
-    // Try with it first (more accurate); if that fails OR gets cut off by
-    // the token limit, retry once without search — plain generation is
-    // shorter and fits comfortably, so the tool never breaks either way.
-    let geminiResponse = await callGemini(true);
+    // Isliye ise SIRF tab try karo jab form me core details khaali hon
+    // (frontend se needsSearch=true aata hai). Warna seedha plain call —
+    // fast, reliable, aur MAX_TOKENS ka risk nahi.
+    let geminiResponse = await callGemini(!!needsSearch);
     let data = await geminiResponse.json();
     let candidate = data?.candidates?.[0];
 
-    const needsFallback = !geminiResponse.ok
+    const needsFallback = needsSearch && (!geminiResponse.ok
       ? /search|tool|grounding/i.test(data?.error?.message || '')
-      : candidate?.finishReason === 'MAX_TOKENS';
+      : candidate?.finishReason === 'MAX_TOKENS');
 
     if (needsFallback) {
       geminiResponse = await callGemini(false);
