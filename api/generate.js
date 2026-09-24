@@ -65,9 +65,9 @@ export default async function handler(req, res) {
           ...(useSearch ? { tools: [{ google_search: {} }] } : {}),
           generationConfig: {
             // Content ab lean/concise instructions ke saath likha ja raha hai
-            // (~800 words + trimmed CSS/JS), isliye ceiling kam kar di —
-            // isse response fast aata hai aur tokens bhi kam burn hote hain.
-            maxOutputTokens: 16000,
+            // (~800 words + trimmed CSS/JS), lekin Google Search grounding
+            // khud bhi tokens use karti hai, isliye ceiling thodi generous rakhi.
+            maxOutputTokens: 24000,
             temperature: 0.7,
             // Gemini 2.5 models "think" before answering, and those thinking
             // tokens are deducted from maxOutputTokens too. Turning thinking
@@ -79,19 +79,23 @@ export default async function handler(req, res) {
     );
 
     // Google Search grounding needs a billing-enabled key on some account
-    // types. Try with it first (more accurate); if that specifically fails,
-    // silently fall back to a plain (non-grounded) call so the tool never
-    // breaks for pure free-tier keys.
+    // types, AND its search results themselves consume output-token budget.
+    // Try with it first (more accurate); if that fails OR gets cut off by
+    // the token limit, retry once without search — plain generation is
+    // shorter and fits comfortably, so the tool never breaks either way.
     let geminiResponse = await callGemini(true);
-    if (!geminiResponse.ok) {
-      const errCheck = await geminiResponse.clone().json().catch(() => null);
-      const msg = errCheck?.error?.message || '';
-      if (/search|tool|grounding/i.test(msg)) {
-        geminiResponse = await callGemini(false);
-      }
-    }
+    let data = await geminiResponse.json();
+    let candidate = data?.candidates?.[0];
 
-    const data = await geminiResponse.json();
+    const needsFallback = !geminiResponse.ok
+      ? /search|tool|grounding/i.test(data?.error?.message || '')
+      : candidate?.finishReason === 'MAX_TOKENS';
+
+    if (needsFallback) {
+      geminiResponse = await callGemini(false);
+      data = await geminiResponse.json();
+      candidate = data?.candidates?.[0];
+    }
 
     if (!geminiResponse.ok) {
       return res.status(geminiResponse.status).json({
@@ -99,7 +103,6 @@ export default async function handler(req, res) {
       });
     }
 
-    const candidate = data?.candidates?.[0];
     const text = candidate?.content?.parts?.map(p => p.text || '').join('\n') || '';
 
     if (!text) {
