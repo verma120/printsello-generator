@@ -332,6 +332,30 @@
     margin:22px 0 12px;padding-top:14px;border-top:1px dashed var(--line);
   }
   .section-sub:first-child{margin-top:0;padding-top:0;border-top:none;}
+
+  .title-chip{
+    display:block;width:100%;text-align:left;background:#fff;
+    border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;
+    font-size:12.5px;color:var(--ink);cursor:pointer;margin-bottom:6px;
+    font-family:'Inter',sans-serif;transition:.15s;
+  }
+  .title-chip:hover{border-color:var(--navy);background:#f5f8ff;}
+  .title-chip:last-child{margin-bottom:0;}
+
+  .image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  @media(max-width:460px){ .image-grid{grid-template-columns:repeat(2,1fr);} }
+  .image-opt{
+    position:relative;border-radius:10px;overflow:hidden;cursor:pointer;
+    border:2.5px solid transparent;aspect-ratio:1.4;background:#eee;
+  }
+  .image-opt img{width:100%;height:100%;object-fit:cover;display:block;}
+  .image-opt.selected{border-color:var(--navy);}
+  .image-opt.selected::after{
+    content:'✓';position:absolute;top:4px;right:4px;background:var(--navy);
+    color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+  .btn-loading{opacity:.6;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -391,6 +415,19 @@
       <div class="field" id="jobTitleField">
         <label>Job Title *</label>
         <input type="text" id="jobTitle" placeholder="जैसे: UP Police Constable Bharti 2026">
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+          <button type="button" class="copy-btn alt small" id="suggestTitleBtn" onclick="suggestTitles()" style="margin:0;">✨ SEO Title Suggest करें</button>
+        </div>
+        <div id="titleSuggestions" style="display:none;margin-top:10px;"></div>
+      </div>
+
+      <div class="field">
+        <label>🖼️ Featured Image (Optional — Auto ya खुद चुनें)</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button type="button" class="copy-btn alt small" id="genImageBtn" onclick="generateImages()" style="margin:0;">🖼️ Image Generate करें</button>
+          <span id="chosenImageLabel" style="font-size:12px;color:var(--ink-soft);">Agar nahi chunenge to article generate karte waqt auto-fetch ho jaayegi.</span>
+        </div>
+        <div id="imageOptions" style="display:none;margin-top:10px;"></div>
       </div>
 
       <div class="row2">
@@ -631,6 +668,8 @@
 // isse "https://" typo ki koi gunjaish nahi rehti.
 const BACKEND_URL = "/api/generate";
 const EXTRACT_BACKEND_URL = "/api/extract";
+const IMAGE_BACKEND_URL = "/api/image";
+const TITLE_BACKEND_URL = "/api/title";
 
 if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -813,11 +852,20 @@ function gatherCommonFields(){
   };
 }
 
-async function callGenerateAPI(prompt, imageQuery){
+function fieldsAreSparse(fields){
+  // Agar core details khud user ne di hain (PDF se ya manually), to search
+  // ki zaroorat nahi — isse tokens bachte hain aur MAX_TOKENS risk bhi kam hota hai.
+  // Search sirf tab chalao jab genuinely "sirf Job Title" wala case ho.
+  const coreFields = [fields.board, fields.postName, fields.vacancy, fields.salary, fields.eligibility, fields.lastDate];
+  const filledCount = coreFields.filter(v => v && v.trim()).length;
+  return filledCount <= 1;
+}
+
+async function callGenerateAPI(prompt, imageQuery, needsSearch){
   const response = await fetch(BACKEND_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, imageQuery })
+    body: JSON.stringify({ prompt, imageQuery, chosenImageUrl: window.__chosenImageUrl || '', needsSearch: !!needsSearch })
   });
 
   const rawBody = await response.text();
@@ -874,7 +922,7 @@ async function generateArticle(){
     const imageQuery = [fields.postName, fields.board].filter(Boolean).join(' ') || title;
 
     setStatus(2, box);
-    const { seoMeta, articleHtml, socialRaw } = await callGenerateAPI(prompt, imageQuery);
+    const { seoMeta, articleHtml, socialRaw } = await callGenerateAPI(prompt, imageQuery, fieldsAreSparse(fields));
     setStatus(4, box);
 
     document.getElementById('previewEmpty').style.display = 'none';
@@ -936,7 +984,7 @@ async function runBatchGenerate(){
     try{
       const prompt = buildPrompt(titles[i], lang, fields, site, applyLink, postType);
       const imageQuery = [fields.postName, fields.board].filter(Boolean).join(' ') || titles[i];
-      const { seoMeta, articleHtml, socialRaw } = await callGenerateAPI(prompt, imageQuery);
+      const { seoMeta, articleHtml, socialRaw } = await callGenerateAPI(prompt, imageQuery, fieldsAreSparse(fields));
       saveDraft(titles[i], articleHtml, seoMeta, socialRaw);
       row.classList.add('done');
       row.querySelector('.b-status').textContent = '✓ Ho gaya';
@@ -1303,6 +1351,109 @@ function previewAuthorPhoto(file){
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+// ---------- Standalone Tool 1: SEO Title Suggest ----------
+async function suggestTitles(){
+  const btn = document.getElementById('suggestTitleBtn');
+  const box = document.getElementById('titleSuggestions');
+  const topic = (document.getElementById('postName').value.trim()
+    || document.getElementById('board').value.trim()
+    || document.getElementById('jobTitle').value.trim());
+
+  if(!topic){
+    alert('Pehle Post Name, Board ya Job Title me se koi ek field bharein — usi base par title suggest honge.');
+    return;
+  }
+
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Generating...';
+  box.style.display = 'block';
+  box.innerHTML = '<div class="pdf-status show"><div class="spinner"></div>Titles ban rahe hain...</div>';
+
+  try{
+    const lang = document.getElementById('lang').value;
+    const response = await fetch(TITLE_BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, lang })
+    });
+
+    const rawBody = await response.text();
+    let data;
+    try{ data = JSON.parse(rawBody); }
+    catch(e){ throw new Error('Server se JSON nahi mila (status '+response.status+'): ' + rawBody.slice(0,150)); }
+
+    if(!response.ok){ throw new Error(data.error || ('Server error (status '+response.status+')')); }
+
+    const titles = data.titles || [];
+    if(titles.length === 0){ throw new Error('Koi title nahi mila.'); }
+
+    box.innerHTML = titles.map(t =>
+      `<button type="button" class="title-chip" onclick="document.getElementById('jobTitle').value=this.textContent;document.getElementById('titleSuggestions').style.display='none';">${escapeHtml(t)}</button>`
+    ).join('');
+  }catch(err){
+    box.innerHTML = '<div class="pdf-status show err">⚠ ' + escapeHtml(err.message) + '</div>';
+  }finally{
+    btn.classList.remove('btn-loading');
+    btn.textContent = '✨ SEO Title Suggest करें';
+  }
+}
+
+// ---------- Standalone Tool 2: Auto Image Generate ----------
+window.__chosenImageUrl = '';
+
+async function generateImages(){
+  const btn = document.getElementById('genImageBtn');
+  const box = document.getElementById('imageOptions');
+  const query = [document.getElementById('postName').value.trim(), document.getElementById('board').value.trim()]
+    .filter(Boolean).join(' ') || document.getElementById('jobTitle').value.trim();
+
+  if(!query){
+    alert('Pehle Job Title ya Post Name/Board bharein — usi base par image dhoondhi jaayegi.');
+    return;
+  }
+
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Searching...';
+  box.style.display = 'block';
+  box.innerHTML = '<div class="pdf-status show"><div class="spinner"></div>Relevant images dhoondhi jaa rahi hain...</div>';
+
+  try{
+    const response = await fetch(IMAGE_BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+
+    const rawBody = await response.text();
+    let data;
+    try{ data = JSON.parse(rawBody); }
+    catch(e){ throw new Error('Server se JSON nahi mila (status '+response.status+'): ' + rawBody.slice(0,150)); }
+
+    if(!response.ok){ throw new Error(data.error || ('Server error (status '+response.status+')')); }
+
+    const images = data.images || [];
+    if(images.length === 0){ throw new Error('Koi image nahi mili.'); }
+
+    box.innerHTML = '<div class="image-grid">' + images.map((img,i) =>
+      `<div class="image-opt" id="imgOpt${i}" onclick="selectImage('${img.url.replace(/'/g,"\\'")}', ${i})">
+        <img src="${img.thumb}" alt="${escapeHtml(img.alt)}" loading="lazy">
+      </div>`
+    ).join('') + '</div>';
+  }catch(err){
+    box.innerHTML = '<div class="pdf-status show err">⚠ ' + escapeHtml(err.message) + '</div>';
+  }finally{
+    btn.classList.remove('btn-loading');
+    btn.textContent = '🖼️ Image Generate करें';
+  }
+}
+
+function selectImage(url, index){
+  window.__chosenImageUrl = url;
+  document.querySelectorAll('.image-opt').forEach(el => el.classList.remove('selected'));
+  document.getElementById('imgOpt'+index).classList.add('selected');
+  document.getElementById('chosenImageLabel').innerHTML = '<b style="color:var(--navy);">✓ Image select ho gayi</b> — article generate karte waqt yahi use hogi.';
 }
 </script>
 </body>
