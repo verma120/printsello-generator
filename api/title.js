@@ -1,3 +1,5 @@
+
+
 // Vercel Serverless Function — /api/title
 // Standalone tool: given a rough topic, returns 5 SEO-friendly, clickable
 // blog title suggestions (lightweight, fast, low token usage).
