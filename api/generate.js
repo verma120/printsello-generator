@@ -5,16 +5,32 @@
 // Featured/hero image auto-fetch uses Openverse (api.openverse.org) — a free,
 // open Creative-Commons image search that needs NO API key at all.
 
+function cleanImageQuery(q) {
+  return q
+    .replace(/[:,\-–—|/\\]/g, ' ')
+    .replace(/\b(20\d{2})\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .slice(0, 4)
+    .join(' ');
+}
+
+async function searchOpenverseOne(q) {
+  const r = await fetch(
+    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&page_size=1&license_type=commercial`,
+    { headers: { 'User-Agent': 'PrintselloJobArticleGenerator/1.0' } }
+  );
+  if (!r.ok) return null;
+  const data = await r.json();
+  return data?.results?.[0]?.url || null;
+}
+
 async function fetchFeaturedImage(query) {
   if (!query) return null;
   try {
-    const r = await fetch(
-      `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=1&aspect_ratio=wide&license_type=commercial`,
-      { headers: { 'User-Agent': 'PrintselloJobArticleGenerator/1.0' } }
-    );
-    if (!r.ok) return null;
-    const data = await r.json();
-    return data?.results?.[0]?.url || null;
+    const cleaned = cleanImageQuery(query) || query;
+    return (await searchOpenverseOne(cleaned)) || (await searchOpenverseOne('government office india'));
   } catch (e) {
     return null;
   }
