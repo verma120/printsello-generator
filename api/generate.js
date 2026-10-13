@@ -64,12 +64,20 @@ export default async function handler(req, res) {
 
     const MODEL = 'gemini-2.5-flash';
 
-    // Agar user ne "Image Generate करें" tool se khud image choose ki hai,
-    // usi ko priority do — warna Openverse se auto-fetch karo (no key needed).
-    const imageUrl = chosenImageUrl || await fetchFeaturedImage(imageQuery || 'government office india');
-    const finalPrompt = imageUrl
-      ? `${prompt}\n\nFEATURED IMAGE URL (use this exact URL for the hero/featured image src): ${imageUrl}`
-      : prompt;
+    // Agar user ne apna khud ka "Title Banner" banaya hai (data: URI, locally
+    // drawn on canvas), ise seedha Gemini ko mat bhejo — bahut saare tokens
+    // waste honge. Sirf ek placeholder bhejo; frontend baad me isse real
+    // image se replace kar dega.
+    const isDataUriImage = typeof chosenImageUrl === 'string' && chosenImageUrl.startsWith('data:');
+    const imageUrl = isDataUriImage
+      ? null
+      : (chosenImageUrl || await fetchFeaturedImage(imageQuery || 'government office india'));
+
+    const finalPrompt = isDataUriImage
+      ? `${prompt}\n\nFEATURED IMAGE: Hero/featured image ke <img> tag ka src attribute EXACTLY ye literal text rakho: FEATURED_IMAGE_SRC_PLACEHOLDER (ise modify mat karo, koi real URL mat banao, bilkul yahi string use karo).`
+      : (imageUrl
+          ? `${prompt}\n\nFEATURED IMAGE URL (use this exact URL for the hero/featured image src): ${imageUrl}`
+          : prompt);
 
     const callGemini = (useSearch) => fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
