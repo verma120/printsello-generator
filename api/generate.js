@@ -2,19 +2,19 @@
 // Uses Google Gemini's FREE API tier (no billing/card required).
 // Get a free key at: https://aistudio.google.com/apikey
 //
-// Optional: set PEXELS_API_KEY (free at https://www.pexels.com/api/) to auto-fetch
-// a relevant featured/hero image for the article.
+// Featured/hero image auto-fetch uses Openverse (api.openverse.org) — a free,
+// open Creative-Commons image search that needs NO API key at all.
 
 async function fetchFeaturedImage(query) {
-  if (!process.env.PEXELS_API_KEY || !query) return null;
+  if (!query) return null;
   try {
     const r = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`,
-      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+      `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=1&aspect_ratio=wide&license_type=commercial`,
+      { headers: { 'User-Agent': 'PrintselloJobArticleGenerator/1.0' } }
     );
     if (!r.ok) return null;
     const data = await r.json();
-    return data?.photos?.[0]?.src?.large || null;
+    return data?.results?.[0]?.url || null;
   } catch (e) {
     return null;
   }
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     const MODEL = 'gemini-2.5-flash';
 
     // Agar user ne "Image Generate करें" tool se khud image choose ki hai,
-    // usi ko priority do — warna Pexels se auto-fetch karo.
+    // usi ko priority do — warna Openverse se auto-fetch karo (no key needed).
     const imageUrl = chosenImageUrl || await fetchFeaturedImage(imageQuery || 'government office india');
     const finalPrompt = imageUrl
       ? `${prompt}\n\nFEATURED IMAGE URL (use this exact URL for the hero/featured image src): ${imageUrl}`
