@@ -424,9 +424,11 @@
       <div class="field">
         <label>🖼️ Featured Image (Optional — Auto ya खुद चुनें)</label>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <button type="button" class="copy-btn alt small" id="genImageBtn" onclick="generateImages()" style="margin:0;">🖼️ Image Generate करें</button>
-          <span id="chosenImageLabel" style="font-size:12px;color:var(--ink-soft);">Agar nahi chunenge to article generate karte waqt auto-fetch ho jaayegi.</span>
+          <button type="button" class="copy-btn alt small" id="genBannerBtn" onclick="generateTitleBanner()" style="margin:0;">🎨 Title Banner Banayein (100% Related)</button>
+          <button type="button" class="copy-btn alt small" id="genImageBtn" onclick="generateImages()" style="margin:0;">🖼️ Stock Photo Dhoondein</button>
         </div>
+        <p class="hint" style="margin-top:6px;">Title Banner hamesha aapke exact topic se match karta hai (seedha title text se banta hai). Stock Photo real-world photo hai par topic se match na bhi ho sakti hai.</p>
+        <span id="chosenImageLabel" style="font-size:12px;color:var(--ink-soft);">Agar nahi chunenge to article generate karte waqt Title Banner apne aap use ho jaayega.</span>
         <div id="imageOptions" style="display:none;margin-top:10px;"></div>
       </div>
 
@@ -889,7 +891,15 @@ async function callGenerateAPI(prompt, imageQuery, needsSearch){
     throw new Error('Article HTML nahi mil paya. Response incomplete tha, dobara try karein.');
   }
 
-  return { seoMeta, articleHtml, socialRaw };
+  // Agar chosen image ek locally-generated banner (data URI) thi, to backend ne
+  // usse Gemini ko nahi bheja (tokens bachane ke liye) — sirf ek placeholder
+  // bhejkar bola tha. Ab yahan real image wapas substitute kar dete hain.
+  const chosen = window.__chosenImageUrl || '';
+  const finalArticleHtml = chosen.startsWith('data:')
+    ? articleHtml.split('FEATURED_IMAGE_SRC_PLACEHOLDER').join(chosen)
+    : articleHtml;
+
+  return { seoMeta, articleHtml: finalArticleHtml, socialRaw };
 }
 
 async function generateArticle(){
@@ -1454,6 +1464,140 @@ function selectImage(url, index){
   document.querySelectorAll('.image-opt').forEach(el => el.classList.remove('selected'));
   document.getElementById('imgOpt'+index).classList.add('selected');
   document.getElementById('chosenImageLabel').innerHTML = '<b style="color:var(--navy);">✓ Image select ho gayi</b> — article generate karte waqt yahi use hogi.';
+}
+
+// ---------- Standalone Tool 3: Title Banner (always 100% topic-related, drawn from the title itself) ----------
+function wrapCanvasText(ctx, text, maxWidth){
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach(w => {
+    const test = current ? current + ' ' + w : w;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = w;
+    } else {
+      current = test;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+function roundRectPath(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+async function generateTitleBanner(){
+  const btn = document.getElementById('genBannerBtn');
+  const title = document.getElementById('jobTitle').value.trim()
+    || document.getElementById('postName').value.trim()
+    || 'Sarkari Naukri 2026';
+  const postType = document.getElementById('postType') ? document.getElementById('postType').value : 'recruitment';
+
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Banner ban raha hai...';
+
+  try{
+    if (document.fonts && document.fonts.load) {
+      await Promise.all([
+        document.fonts.load('800 60px Poppins').catch(()=>{}),
+        document.fonts.load('700 26px Poppins').catch(()=>{}),
+        document.fonts.load('600 22px Inter').catch(()=>{})
+      ]);
+    }
+
+    const W = 1200, H = 630;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#1d3557');
+    grad.addColorStop(1, '#0f1f33');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Accent diagonal shape
+    ctx.save();
+    ctx.fillStyle = '#e63946';
+    ctx.beginPath();
+    ctx.moveTo(W, 0);
+    ctx.lineTo(W, H * 0.6);
+    ctx.lineTo(W * 0.62, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Subtle dot pattern
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.fillStyle = '#ffffff';
+    for (let x = 0; x < W; x += 30) {
+      for (let y = 0; y < H; y += 30) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    // Badge (post-type aware)
+    const badgeMap = {
+      recruitment: 'सरकारी भर्ती 2026',
+      result: 'परिणाम घोषित',
+      admitcard: 'एडमिट कार्ड जारी',
+      answerkey: 'आंसर की जारी'
+    };
+    const badgeText = badgeMap[postType] || 'सरकारी नौकरी अपडेट';
+    ctx.font = '700 26px Poppins, sans-serif';
+    const badgePadX = 24;
+    const badgeW = ctx.measureText(badgeText).width + badgePadX * 2;
+    const badgeX = 70, badgeY = 85, badgeH = 50;
+    ctx.fillStyle = '#e63946';
+    roundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 25);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgeH / 2 + 2);
+
+    // Title (wrapped, max 4 lines)
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 56px Poppins, sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    const lines = wrapCanvasText(ctx, title, 680).slice(0, 4);
+    let ty = badgeY + badgeH + 95;
+    lines.forEach(line => {
+      ctx.fillText(line, 70, ty);
+      ty += 66;
+    });
+
+    // Printsello watermark
+    ctx.font = '600 22px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Printsello', 70, H - 50);
+
+    const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    window.__chosenImageUrl = dataUri;
+
+    const box = document.getElementById('imageOptions');
+    box.style.display = 'block';
+    box.innerHTML = '<div class="image-grid"><div class="image-opt selected" style="grid-column:1/-1;aspect-ratio:1200/630;"><img src="' + dataUri + '" alt="Title banner"></div></div>';
+    document.getElementById('chosenImageLabel').innerHTML = '<b style="color:var(--navy);">✓ Title Banner ban gaya aur select ho gaya</b> — article generate karte waqt yahi hero image hogi.';
+  }catch(err){
+    alert('Banner banane me error: ' + err.message);
+  }finally{
+    btn.classList.remove('btn-loading');
+    btn.textContent = '🎨 Title Banner Banayein (100% Related)';
+  }
 }
 </script>
 </body>
