@@ -1,6 +1,7 @@
 // Vercel Serverless Function — /api/image
 // Standalone tool: given a topic/title, returns a few relevant SEO-friendly
-// stock photo options (via Pexels free API) for the user to pick from.
+// stock photo options via Openverse (api.openverse.org) — a free, open
+// Creative-Commons image search that needs NO API key at all.
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,31 +23,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Topic/title missing in request body.' });
     }
 
-    if (!process.env.PEXELS_API_KEY) {
-      return res.status(500).json({
-        error: 'Server par PEXELS_API_KEY set nahi hai. Free key https://www.pexels.com/api/ se lekar Vercel Environment Variables me add karein.'
-      });
-    }
-
     const r = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=6&orientation=landscape`,
-      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+      `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=6&aspect_ratio=wide&license_type=commercial`,
+      { headers: { 'User-Agent': 'PrintselloJobArticleGenerator/1.0' } }
     );
 
     if (!r.ok) {
-      return res.status(r.status).json({ error: 'Pexels API se image nahi mil payi.' });
+      return res.status(r.status).json({ error: 'Openverse se image nahi mil payi.' });
     }
 
     const data = await r.json();
-    const images = (data?.photos || []).map(p => ({
-      url: p.src?.large,
-      thumb: p.src?.medium,
-      alt: p.alt || query,
-      credit: p.photographer || ''
+    const images = (data?.results || []).map(p => ({
+      url: p.url,
+      thumb: p.thumbnail || p.url,
+      alt: p.title || query,
+      credit: p.creator || p.source || ''
     })).filter(i => i.url);
 
     if (images.length === 0) {
-      return res.status(404).json({ error: 'Is topic ke liye koi image nahi mili, dusra keyword try karein.' });
+      return res.status(404).json({ error: 'Is topic ke liye koi image nahi mili, dusra keyword try karein (jaise sirf "government office" ya "exam").' });
     }
 
     return res.status(200).json({ images });
